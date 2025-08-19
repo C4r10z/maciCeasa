@@ -1,13 +1,4 @@
-2025/08/19-19:31:18.684 8760 Reusing MANIFEST D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2025/08/19-19:31:18.684 8760 Recovering log #40
-2025/08/19-19:31:18.711 8760 Reusing old log D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000040.log 
-2025/08/19-19:31:20.638 8760 Level-0 table #45: started
-2025/08/19-19:31:20.714 8760 Level-0 table #45: 95456 bytes OK
-2025/08/19-19:31:20.753 8760 Delete type=0 #40
-2025/08/19-19:31:20.753 8760 Manual compaction at level-0 from '\x00\x1d\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x1e\x00\x00\x00' @ 0 : 0; will stop at (end)
-2025/08/19-19:31:22.155 31c0 Compacting 1@1 + 1@2 files
-2025/08/19-19:31:22.279 31c0 Generated table #46@1: 24139 keys, 926205 bytes
-2025/08/19-19:31:22.279 31c0 Compacted 1@1 + 1@2 files => 926205 bytes
-2025/08/19-19:31:22.329 31c0 compacted to: files[ 0 0 1 0 0 0 0 ]
-2025/08/19-19:31:22.330 31c0 Delete type=2 #42
-2025/08/19-19:31:22.330 31c0 Delete type=2 #45
+2025/08/19-19:38:02.904 8910 Reusing MANIFEST D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/08/19-19:38:02.905 8910 Recovering log #44
+2025/08/19-19:38:02.947 8910 Reusing old log D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000044.log 
+2025/08/19-19:38:04.475 856c Manual compaction at level-0 from '\x00\x1e\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x1f\x00\x00\x00' @ 0 : 0; will stop at (end)
