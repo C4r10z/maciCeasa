@@ -10,7 +10,7 @@ const TZ = "America/Sao_Paulo";
 const NEGOTIATION_PHONE = "5532991137334"; // 55 + DDD + número (pessoal do lojista p/ negociação/alertas)
 
 // ATENÇÃO: deixe TRUE apenas para a PRIMEIRA execução (gera QR). Depois mude para FALSE.
-const FORCE_RELOGIN = true;
+const FORCE_RELOGIN = false;
 
 // Se o Chromium do Puppeteer não abrir no seu ambiente, você pode usar o Chrome instalado:
 const USE_INSTALLED_CHROME = false; // mude para true se precisar
@@ -21,6 +21,15 @@ const conversations = new Map(); // customerJid -> { type, status, items:[{name,
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => moment().tz(TZ).format("DD/MM/YYYY HH:mm");
 const fmt = (n) => Number(n || 0).toFixed(2);
+
+// Adicione no início do arquivo, após as imports
+function debugJid(jid) {
+  if (!jid) return "JID_VAZIO";
+  if (typeof jid === 'string') return jid;
+  if (jid._serialized) return jid._serialized;
+  if (jid.serialize) return jid.serialize();
+  return JSON.stringify(jid);
+}
 
 function isOrderMessageText(t) {
   return /\*pedido\s*ceasa\*/i.test(t || "");
@@ -96,7 +105,7 @@ if (FORCE_RELOGIN && fs.existsSync(authDir)) {
 
 /** ========= CLIENT ========= */
 const puppeteerConfig = {
-  headless: true, // QR sai no terminal com qrcode-terminal
+  headless: true, // pode deixar true; o QR sai no terminal pelo qrcode-terminal
   args: ["--no-sandbox", "--disable-setuid-sandbox"],
 };
 
@@ -107,17 +116,29 @@ if (USE_INSTALLED_CHROME && fs.existsSync(CHROME_PATH)) {
   console.log("🧭 Usando Chromium do Puppeteer (padrão).");
 }
 
+// Substitua a criação do Client por isto:
 const client = new Client({
   authStrategy: new LocalAuth({ clientId: "ceasa-bot-01" }),
-  puppeteer: puppeteerConfig,
+  puppeteer: {
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    ignoreHTTPSErrors: true,
+    executablePath: USE_INSTALLED_CHROME && fs.existsSync(CHROME_PATH) 
+      ? CHROME_PATH 
+      : process.env.CHROME_PATH || undefined
+  },
+  webVersionCache: {
+    type: 'remote',
+    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+  }
 });
 
 let SELF_JID = null;
 let NEGOTIATION_JID = null;
 
-/** ========= QR CODE NO TERMINAL ========= */
 client.on("qr", (qr) => {
   console.log("\n📲 Escaneie o QR abaixo para logar no WhatsApp do ROBÔ:\n");
+  // NÃO usar console.clear() aqui pra não apagar o QR do terminal
   try {
     qrcode.generate(qr, { small: true }); // imprime ASCII no CMD/PowerShell
   } catch (e) {
@@ -159,67 +180,36 @@ client.on("disconnected", (r) => console.log("🔌 Desconectado:", r));
 
 client.initialize();
 
-/** ========= ENVIO ROBUSTO ========= */
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function resolveChat(jid) {
-  try {
-    const chat = await client.getChatById(jid);
-    if (chat) return chat;
-  } catch (_) {}
-  try {
-    const contact = await client.getContactById(jid);
-    if (contact && contact.getChat) {
-      const chat = await contact.getChat();
-      if (chat) return chat;
-    }
-  } catch (_) {}
-  return null;
-}
-
+// Função safeSendMessage revisada
 async function safeSendMessage(jid, content, opts = {}) {
+  const debugJidStr = debugJid(jid);
+  console.log(`📤 Tentando enviar para: ${debugJidStr}`);
+  
   if (!jid) {
     console.error("❌ safeSendMessage: JID vazio.");
     return null;
   }
-
-  // 1) tenta via chat.sendMessage
+  
   try {
-    const chat = await resolveChat(jid);
-    if (chat) {
-      const msg = await chat.sendMessage(content, opts);
-      return msg || true;
+    let finalJid;
+    if (typeof jid === 'string') {
+      finalJid = jid.includes('@c.us') ? jid : `${jid}@c.us`;
+    } else if (jid._serialized) {
+      finalJid = jid._serialized;
+    } else if (jid.serialize) {
+      finalJid = jid.serialize();
+    } else {
+      console.error("❌ Formato de JID não suportado:", debugJidStr);
+      return null;
     }
+    
+    console.log(`✅ Enviando mensagem para: ${finalJid}`);
+    const result = await client.sendMessage(finalJid, content, opts);
+    console.log(`✅ Mensagem enviada com sucesso para: ${finalJid}`);
+    return result;
   } catch (e) {
-    console.warn(`[safeSendMessage] chat.sendMessage falhou (${jid}):`, e?.message || e);
-  }
-
-  // 2) fallback direto: client.sendMessage
-  try {
-    const msg = await client.sendMessage(jid, content, opts);
-    return msg || true;
-  } catch (e) {
-    console.warn(`[safeSendMessage] client.sendMessage falhou (${jid}):`, e?.message || e);
-  }
-
-  // 3) pequena espera e nova tentativa (contexto destruído/reload)
-  await sleep(1200);
-
-  try {
-    const chat = await resolveChat(jid);
-    if (chat) {
-      const msg = await chat.sendMessage(content, opts);
-      return msg || true;
-    }
-  } catch (e) {
-    console.warn(`[safeSendMessage] retry chat.sendMessage falhou (${jid}):`, e?.message || e);
-  }
-
-  try {
-    const msg = await client.sendMessage(jid, content, opts);
-    return msg || true;
-  } catch (e) {
-    console.error(`❌ safeSendMessage: todas as tentativas falharam (${jid}):`, e?.message || e);
+    console.error(`❌ sendMessage falhou para ${debugJidStr}:`, e?.message || e);
+    console.error("Stack trace:", e?.stack || "Não disponível");
     return null;
   }
 }
@@ -236,11 +226,32 @@ async function contactLabel(jid) {
 }
 
 /** ========= HANDLERS ========= */
+
+
 /** 1) Entradas de clientes */
 client.on("message", async (msg) => {
   try {
     if (msg.type !== "chat") return;
-    const from = msg.from;
+    
+    // Obter o remetente de forma mais confiável
+    let from;
+    if (msg.from) {
+      from = msg.from;
+    } else if (msg.author) {
+      from = msg.author;
+    } else if (msg.id && msg.id.remote) {
+      from = msg.id.remote;
+    } else {
+      console.error("Não foi possível determinar o remetente:", msg);
+      return;
+    }
+    
+    // Garantir que o from está no formato correto
+    if (!from.includes('@c.us')) {
+      from = `${from}@c.us`;
+    }
+    
+    console.log(`📩 Mensagem recebida de: ${from}`);
 
     // Pedido vindo do site
     if (isOrderMessageText(msg.body)) {
@@ -324,72 +335,74 @@ client.on("message", async (msg) => {
 /** 2) Ações do lojista (mensagens ENVIADAS POR VOCÊ, no chat do cliente) */
 client.on("message_create", async (msg) => {
   try {
-    if (!msg.fromMe) return; // só processa o que VOCÊ enviou
-    const to = msg.to; // JID do cliente
+    if (!msg.fromMe) return;
+    const to = msg.to;
     const t = (msg.body || "").trim();
+    if (!/@c\.us$/.test(to)) return;
 
-    if (!/@c\.us$/.test(to)) return; // só chats 1:1
+    let conv = conversations.get(to);
 
-    const conv = conversations.get(to);
+    // 👇 Se o lojista mandou números mas não há conversa em memória
+    if (!conv && /[\d,.\n]/.test(t)) {
+      await safeSendMessage(
+        to,
+        "⚠️ Não encontrei um pedido *fidelizado* ativo para este chat.\n" +
+        "Reenvie o *PEDIDO CEASA* pelo site, por favor."
+      );
+      return;
+    }
 
-    // === Lojista enviando VALORES por linha (FIDELIZADO) ===
-    if (conv?.type === "fidel" && conv?.status === "AWAITING_TOTAL") {
-      if (/[\d,.\n]/.test(t)) {
-        const items = conv.items || [];
-        if (!items.length) {
-          await safeSendMessage(to, "⚠️ Não consegui identificar os itens deste pedido. Reenvie o *PEDIDO CEASA*, por favor.");
-          return;
-        }
-
-        const parsed = parsePricesPerLine(t, items.length);
-        if (!parsed.ok) {
-          await safeSendMessage(
-            to,
-            `⚠️ ${parsed.reason}\nEnvie *uma linha por item* (mesma ordem dos itens) e, se quiser, *a última linha como Total*. Exemplo:\n40.00\n35.00\n67.00\n142.00`
-          );
-          if (NEGOTIATION_JID) {
-            await safeSendMessage(
-              NEGOTIATION_JID,
-              `⚠️ Valores inválidos no pedido de ${await contactLabel(to)}: ${parsed.reason}`
-            );
-          }
-          return;
-        }
-
-        const { itemValues, totalGiven } = parsed;
-        const computedTotal = itemValues.reduce((a, b) => a + b, 0);
-        const total = Number.isFinite(totalGiven) ? totalGiven : computedTotal;
-
-        if (Number.isFinite(totalGiven)) {
-          const diff = Math.abs(totalGiven - computedTotal);
-          if (diff > 0.01 && NEGOTIATION_JID) {
-            await safeSendMessage(
-              NEGOTIATION_JID,
-              `⚠️ *Divergência de total* no pedido de ${await contactLabel(to)}\n` +
-                `Itens: R$ ${fmt(computedTotal)} | Total informado: R$ ${fmt(totalGiven)}\n` +
-                `Se for ajuste intencional (frete, desconto, etc.), desconsidere.`
-            );
-          }
-        }
-
-        const detailLines = items.map((it, i) => `• ${it.name} — R$ ${fmt(itemValues[i])}`);
-        detailLines.push(`\n*Total:* R$ ${fmt(total)}`);
-
+    // 👇 Se há conversa e está aguardando orçamento do lojista
+    if (conv && conv.type === "fidel" && conv.status === "AWAITING_TOTAL") {
+      const items = conv.items || [];
+      const parsed = parsePricesPerLine(t, items.length);
+      if (!parsed.ok) {
         await safeSendMessage(
           to,
-          `💰 *Orçamento do seu pedido:*\n\n${detailLines.join("\n")}\n\n` +
-            `*Deseja confirmar?*\n1) Confirmar\n2) Negociar`
+          `⚠️ ${parsed.reason}\nEnvie *uma linha por item* (mesma ordem dos itens) e, se quiser, *a última linha como Total*. Exemplo:\n40.00\n35.00\n67.00\n142.00`
         );
-
-        conversations.set(to, {
-          ...conv,
-          status: "QUOTED",
-          quotedLines: itemValues,
-          quotedTotal: total,
-          updatedAt: Date.now(),
-        });
+        if (NEGOTIATION_JID) {
+          await safeSendMessage(
+            NEGOTIATION_JID,
+            `⚠️ Valores inválidos no pedido de ${await contactLabel(to)}: ${parsed.reason}`
+          );
+        }
         return;
       }
+
+      const { itemValues, totalGiven } = parsed;
+      const computedTotal = itemValues.reduce((a, b) => a + b, 0);
+      const total = Number.isFinite(totalGiven) ? totalGiven : computedTotal;
+
+      if (Number.isFinite(totalGiven)) {
+        const diff = Math.abs(totalGiven - computedTotal);
+        if (diff > 0.01 && NEGOTIATION_JID) {
+          await safeSendMessage(
+            NEGOTIATION_JID,
+            `⚠️ *Divergência de total* no pedido de ${await contactLabel(to)}\n` +
+              `Itens: R$ ${fmt(computedTotal)} | Total informado: R$ ${fmt(totalGiven)}\n` +
+              `Se for ajuste intencional (frete, desconto, etc.), desconsidere.`
+          );
+        }
+      }
+
+      const detailLines = items.map((it, i) => `• ${it.name} — R$ ${fmt(itemValues[i])}`);
+      detailLines.push(`\n*Total:* R$ ${fmt(total)}`);
+
+      await safeSendMessage(
+        to,
+        `💰 *Orçamento do seu pedido:*\n\n${detailLines.join("\n")}\n\n` +
+          `*Deseja confirmar?*\n1) Confirmar\n2) Negociar`
+      );
+
+      conversations.set(to, {
+        ...conv,
+        status: "QUOTED",
+        quotedLines: itemValues,
+        quotedTotal: total,
+        updatedAt: Date.now(),
+      });
+      return;
     }
 
     // === Lojista enviando comandos 1/2/3 após confirmação do cliente ===
