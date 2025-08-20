@@ -222,7 +222,7 @@ client.on("message", async (msg) => {
     /* =========================
        1) PREÇOS VINDOS DO MERCADOR
        ========================= */
-    if (msg.from === NEGOTIATION_JID) {
+    if (from === NEGOTIATION_JID) {
       const raw = (msg.body || "").trim();
       const lines = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
       const looksNumericBlock =
@@ -234,22 +234,38 @@ client.on("message", async (msg) => {
       if (looksNumericBlock) {
         // identificar cliente pela 1ª linha (telefone) ou último pendente
         let target = null;
-        const first = lines[0];
-        const mPhone = first.match(/(\+?55\d{10,13}|\d{10,13})/);
-        if (mPhone) {
-          let num = mPhone[1].replace(/^\+/, "");
-          if (!num.startsWith("55")) num = "55" + num;
+        const first = lines[0] || "";
+        const onlyDigits = first.replace(/\D/g, ""); // tira espaços, (), -, etc.
+        if (onlyDigits.length >= 11) {
+          let num = onlyDigits.startsWith("55") ? onlyDigits : "55" + onlyDigits;
           target = `${num}@c.us`;
-          if (/^\+?\d{10,15}$/.test(first.replace(/^55/, ""))) {
+          // se a primeira linha era basicamente um telefone (com ou sem sinais), removemos
+          if (first.replace(/\D/g, "").length >= 11 && first.replace(/\D/g, "").length <= 13) {
             lines.shift();
           }
         }
-        if (!target) target = lastPendingCustomer || null;
+        if (!target) {
+          target = lastPendingCustomer || null;
+
+          // Fallback: pega a conversa fidel mais recente aguardando orçamento
+          if (!target && conversations.size) {
+            let best = null;
+            for (const [jid, cv] of conversations.entries()) {
+              if (cv?.type === "fidel" && cv?.status === "AWAITING_TOTAL") {
+                if (!best || (cv.updatedAt || 0) > (best.updatedAt || 0)) {
+                  best = { jid, updatedAt: cv.updatedAt };
+                }
+              }
+            }
+            if (best) target = best.jid;
+          }
+        }
+
         if (!target) {
           await safeSendMessage(
             NEGOTIATION_JID,
-            "⚠️ Não há cliente pendente para receber orçamento.\n" +
-              "Envie o *número do cliente* na 1ª linha (ex: +553298661836), seguido dos valores."
+            "⚠️ Não encontrei cliente pendente.\n" +
+            "👉 Envie o *número do cliente* na primeira linha (ex: +553298661836) e, abaixo, os valores."
           );
           return;
         }
@@ -341,6 +357,8 @@ client.on("message", async (msg) => {
       });
 
       if (fidel) lastPendingCustomer = from;
+      console.log("🧷 lastPendingCustomer =", lastPendingCustomer);
+
 
       await (await msg.getChat()).sendStateTyping();
       await delay(400);
