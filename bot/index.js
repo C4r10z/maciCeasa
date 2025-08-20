@@ -231,6 +231,10 @@ client.on("message", async (msg) => {
        1) PREÇOS VINDOS DO MERCADOR
        ========================= */
     if (from === NEGOTIATION_JID) {
+    // ===== 0) Comandos 1/2/3 vindos do mercador =====
+    // Formas aceitas:
+    //   a) Só "1" / "2" / "3"  -> aplica ao cliente alvo (ver regra abaixo)
+    //   b) Primeira linha = telefone e segunda = "1"/"2"/"3" -> aplica ao telefone indicado
     const raw = (msg.body || "").trim();
     const linesCmd = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
     const cmdOnly = linesCmd.length === 1 && /^[123]$/.test(linesCmd[0]);
@@ -461,7 +465,7 @@ client.on("message", async (msg) => {
 
     // Se chegou aqui: mensagem do mercador que não é preços nem comando 1/2/3 -> ignora
     return;
-  } // se não era bloco numérico, segue o fluxo normal (pode ser outra conversa sua com o bot)
+    // se não era bloco numérico, segue o fluxo normal (pode ser outra conversa sua com o bot)
 
     /* =========================
        2) PEDIDO CEASA (cliente)
