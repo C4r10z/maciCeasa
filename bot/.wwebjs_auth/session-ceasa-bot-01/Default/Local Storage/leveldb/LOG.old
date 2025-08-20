@@ -1,3 +1,6 @@
-2025/08/20-11:18:29.714 4e24 Reusing MANIFEST D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\Local Storage\leveldb/MANIFEST-000001
-2025/08/20-11:18:29.719 4e24 Recovering log #4
-2025/08/20-11:18:29.860 4e24 Reusing old log D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\Local Storage\leveldb/000004.log 
+2025/08/20-12:24:33.978 6740 Reusing MANIFEST D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\Local Storage\leveldb/MANIFEST-000001
+2025/08/20-12:24:33.979 6740 Recovering log #4
+2025/08/20-12:24:33.979 6740 Reusing old log D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\Local Storage\leveldb/000004.log 
+2025/08/20-12:25:34.437 6740 Level-0 table #8: started
+2025/08/20-12:25:34.523 6740 Level-0 table #8: 17319 bytes OK
+2025/08/20-12:25:34.558 6740 Delete type=0 #4

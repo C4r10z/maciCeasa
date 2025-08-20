@@ -96,7 +96,7 @@ if (FORCE_RELOGIN && fs.existsSync(authDir)) {
 
 /** ========= CLIENT ========= */
 const puppeteerConfig = {
-  headless: true, // pode deixar true; o QR sai no terminal pelo qrcode-terminal
+  headless: true, // QR sai no terminal com qrcode-terminal
   args: ["--no-sandbox", "--disable-setuid-sandbox"],
 };
 
@@ -115,9 +115,9 @@ const client = new Client({
 let SELF_JID = null;
 let NEGOTIATION_JID = null;
 
+/** ========= QR CODE NO TERMINAL ========= */
 client.on("qr", (qr) => {
   console.log("\n📲 Escaneie o QR abaixo para logar no WhatsApp do ROBÔ:\n");
-  // NÃO usar console.clear() aqui pra não apagar o QR do terminal
   try {
     qrcode.generate(qr, { small: true }); // imprime ASCII no CMD/PowerShell
   } catch (e) {
@@ -159,18 +159,71 @@ client.on("disconnected", (r) => console.log("🔌 Desconectado:", r));
 
 client.initialize();
 
+/** ========= ENVIO ROBUSTO ========= */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function resolveChat(jid) {
+  try {
+    const chat = await client.getChatById(jid);
+    if (chat) return chat;
+  } catch (_) {}
+  try {
+    const contact = await client.getContactById(jid);
+    if (contact && contact.getChat) {
+      const chat = await contact.getChat();
+      if (chat) return chat;
+    }
+  } catch (_) {}
+  return null;
+}
+
 async function safeSendMessage(jid, content, opts = {}) {
   if (!jid) {
     console.error("❌ safeSendMessage: JID vazio.");
     return null;
   }
+
+  // 1) tenta via chat.sendMessage
   try {
-    return await client.sendMessage(jid, content, opts);
+    const chat = await resolveChat(jid);
+    if (chat) {
+      const msg = await chat.sendMessage(content, opts);
+      return msg || true;
+    }
   } catch (e) {
-    console.error(`❌ sendMessage falhou para ${jid}:`, e?.message || e);
+    console.warn(`[safeSendMessage] chat.sendMessage falhou (${jid}):`, e?.message || e);
+  }
+
+  // 2) fallback direto: client.sendMessage
+  try {
+    const msg = await client.sendMessage(jid, content, opts);
+    return msg || true;
+  } catch (e) {
+    console.warn(`[safeSendMessage] client.sendMessage falhou (${jid}):`, e?.message || e);
+  }
+
+  // 3) pequena espera e nova tentativa (contexto destruído/reload)
+  await sleep(1200);
+
+  try {
+    const chat = await resolveChat(jid);
+    if (chat) {
+      const msg = await chat.sendMessage(content, opts);
+      return msg || true;
+    }
+  } catch (e) {
+    console.warn(`[safeSendMessage] retry chat.sendMessage falhou (${jid}):`, e?.message || e);
+  }
+
+  try {
+    const msg = await client.sendMessage(jid, content, opts);
+    return msg || true;
+  } catch (e) {
+    console.error(`❌ safeSendMessage: todas as tentativas falharam (${jid}):`, e?.message || e);
     return null;
   }
 }
+
 async function contactLabel(jid) {
   try {
     const c = await client.getContactById(jid);
@@ -280,7 +333,7 @@ client.on("message_create", async (msg) => {
     const conv = conversations.get(to);
 
     // === Lojista enviando VALORES por linha (FIDELIZADO) ===
-    if (conv?.type === "fidel" && conv.status === "AWAITING_TOTAL") {
+    if (conv?.type === "fidel" && conv?.status === "AWAITING_TOTAL") {
       if (/[\d,.\n]/.test(t)) {
         const items = conv.items || [];
         if (!items.length) {
