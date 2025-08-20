@@ -1,2 +1,3 @@
-2025/08/19-19:04:59.624 82b4 Creating DB D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\shared_proto_db since it was missing.
-2025/08/19-19:04:59.691 82b4 Reusing MANIFEST D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\shared_proto_db/MANIFEST-000001
+2025/08/20-11:35:48.418 4334 Reusing MANIFEST D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\shared_proto_db/MANIFEST-000001
+2025/08/20-11:35:48.424 4334 Recovering log #3
+2025/08/20-11:35:48.424 4334 Reusing old log D:\maci\bot\.wwebjs_auth\session-ceasa-bot-01\Default\shared_proto_db/000003.log 

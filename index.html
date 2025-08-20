@@ -5,12 +5,28 @@
   <title>Hortifruti CEASA – Pedidos via WhatsApp</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/site/style.css">
+  <link rel="stylesheet" href="./site/style.css">
 </head>
 <body>
   <i class="leaf-decoration leaf-1 fas fa-leaf"></i>
   <i class="leaf-decoration leaf-2 fas fa-leaf"></i>
-  
+
+  <!-- Modal de tipo de cliente -->
+  <div id="clientTypeModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card">
+      <h2 class="modal-title">Como você deseja comprar?</h2>
+      <p class="modal-subtitle">Escolha uma opção para personalizar os preços e o atendimento.</p>
+      <div class="modal-actions">
+        <button id="btnSouNovo" class="btn primary"><i class="fas fa-user-plus"></i> Sou novo</button>
+        <button id="btnJaSouCliente" class="btn outline"><i class="fas fa-id-badge"></i> Já sou cliente</button>
+      </div>
+      <p class="modal-hint">
+        <i class="fas fa-info-circle"></i>
+        Clientes fidelizados visualizam os produtos <strong>sem preços</strong>; o valor é calculado pelo lojista.
+      </p>
+    </div>
+  </div>
+
   <header class="header">
     <div class="container">
       <div class="brand">
@@ -49,10 +65,12 @@
         </button>
       </div>
 
+      <div class="client-badge" id="clientBadge"></div>
+
       <div id="cartItems" class="cart-items"></div>
 
       <div class="cart-footer">
-        <div class="totals">
+        <div class="totals" id="totalsBox">
           <div><strong>Itens:</strong> <span id="totalQty">0</span></div>
           <div><strong>Total:</strong> R$ <span id="totalPrice">0,00</span></div>
         </div>

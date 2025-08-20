@@ -1,10 +1,9 @@
 {
   "name": "ceasa-wweb-bot",
-  "version": "1.0.1",
-  "description": "Bot CEASA via whatsapp-web.js com QR e botões para o lojista.",
+  "version": "1.1.1",
+  "description": "Bot CEASA via whatsapp-web.js (QR no terminal)",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "dev": "node index.js"
   },
   "dependencies": {
