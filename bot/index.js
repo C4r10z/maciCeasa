@@ -233,45 +233,30 @@ client.on("message", async (msg) => {
     if (from === NEGOTIATION_JID) {
     const raw = (msg.body || "").trim();
 
-    // Declare no topo e use um nome único para não conflitar
-    const priceLines = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    // ===== 0) Comandos 1/2/3 vindos do mercador =====
+    // Formas aceitas:
+    //   a) Só "1" / "2" / "3"  -> aplica ao último cliente CONFIRMADO
+    //   b) Primeira linha é telefone e a segunda é "1" / "2" / "3" -> aplica ao telefone indicado
+    const cmdOnly = raw.match(/^\s*([123])\s*$/);
 
-    // Heurística de "bloco numérico"
-    const looksNumericBlock =
-      priceLines.length > 0 &&
-      priceLines.every((l) => /^[\sR$r$\.,\d()+-]+$/.test(l)) && // permite R$, pontos, vírgulas, +, (), -
-      /\d/.test(raw) &&
-      !/[A-Za-zÀ-ÿ]/.test(raw.replace(/^(\+?55)?[\d\s().-]+$/, "")); // não tem letras, exceto se a linha for só telefone
+    // Se tiver múltiplas linhas, veja se a 1ª é telefone e a 2ª é comando 1/2/3
+    const linesCmd = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const firstDigits = (linesCmd[0] || "").replace(/\D/g, "");
+    const hasPhoneFirstLine = firstDigits.length >= 11;
+    const secondIsCmd = linesCmd[1] && /^[123]$/.test(linesCmd[1]);
 
-    if (!looksNumericBlock) {
-      // não é bloco de orçamento; deixa seguir o fluxo (ex.: você falando com o bot)
-      return;
-    }
+    if (cmdOnly || (hasPhoneFirstLine && secondIsCmd)) {
+      // Descobrir o alvo
+      let target = null;
 
-    // 1) tentar identificar cliente pela 1ª linha (telefone) — aceitando formatos variados
-    let target = null;
-    if (priceLines.length) {
-      const first = priceLines[0];
-      const digits = first.replace(/\D/g, ""); // remove tudo que não é número
-
-      if (digits.length >= 11) {
-        let num = digits.startsWith("55") ? digits : "55" + digits;
+      if (hasPhoneFirstLine && secondIsCmd) {
+        let num = firstDigits.startsWith("55") ? firstDigits : "55" + firstDigits;
         target = `${num}@c.us`;
-
-        // se a primeira linha era basicamente o telefone, removemos do bloco de valores
-        if (digits.length >= 11 && digits.length <= 13) {
-          priceLines.shift();
-        }
-      }
-    }
-
-    // 2) se não veio telefone, usa último pendente; se ainda não, pega o mais recente “AWAITING_TOTAL”
-    if (!target) {
-      target = lastPendingCustomer || null;
-      if (!target && conversations.size) {
+      } else {
+        // Pega o cliente CONFIRMADO mais recente
         let best = null;
         for (const [jid, cv] of conversations.entries()) {
-          if (cv?.type === "fidel" && cv?.status === "AWAITING_TOTAL") {
+          if (cv?.type === "fidel" && cv?.status === "CONFIRMED") {
             if (!best || (cv.updatedAt || 0) > (best.updatedAt || 0)) {
               best = { jid, updatedAt: cv.updatedAt };
             }
@@ -279,88 +264,158 @@ client.on("message", async (msg) => {
         }
         if (best) target = best.jid;
       }
-    }
 
-    if (!target) {
-      await safeSendMessage(
-        NEGOTIATION_JID,
-        "⚠️ Não encontrei cliente pendente.\n" +
-        "👉 Envie o *número do cliente* na primeira linha (ex: +553298661836) e, abaixo, os valores."
-      );
-      return;
-    }
-
-    const conv = conversations.get(target);
-    if (!(conv?.type === "fidel" && conv.status === "AWAITING_TOTAL")) {
-      await safeSendMessage(
-        NEGOTIATION_JID,
-        `⚠️ O cliente ${await contactLabel(target)} não está aguardando orçamento.\n` +
-        `Peça para ele reenviar o *PEDIDO CEASA* pelo site.`
-      );
-      return;
-    }
-
-    const items = conv.items || [];
-    if (!items.length) {
-      await safeSendMessage(
-        NEGOTIATION_JID,
-        `⚠️ Não encontrei itens para ${await contactLabel(target)}.\n` +
-        `Requisito: o pedido precisa vir do site.`
-      );
-      return;
-    }
-
-    // 3) parse dos valores e envio
-    const parsed = parsePricesPerLine(priceLines.join("\n"), items.length);
-    if (!parsed.ok) {
-      await safeSendMessage(
-        NEGOTIATION_JID,
-        `⚠️ ${parsed.reason}\n` +
-        `Formato: *uma linha por item (mesma ordem)* e, se quiser, *a última linha como Total*.\n` +
-        `Exemplo:\n40.00\n35.00\n67.00\n142.00`
-      );
-      return;
-    }
-
-    const { itemValues, totalGiven } = parsed;
-    const computedTotal = itemValues.reduce((a, b) => a + b, 0);
-    const total = Number.isFinite(totalGiven) ? totalGiven : computedTotal;
-
-    if (Number.isFinite(totalGiven)) {
-      const diff = Math.abs(totalGiven - computedTotal);
-      if (diff > 0.01) {
+      if (!target) {
         await safeSendMessage(
           NEGOTIATION_JID,
-          `ℹ️ Itens somam R$ ${fmt(computedTotal)} e o total enviado foi R$ ${fmt(totalGiven)}.\n` +
-          `Se foi frete/desconto, ok.`
+          "⚠️ Não encontrei cliente *confirmado* para aplicar o comando.\n" +
+          "Envie:\n• Somente `1`/`2`/`3` (aplica ao último confirmado),\n" +
+          "• ou duas linhas: primeira o telefone, segunda o comando (ex.: `+5532...` ↵ `1`)."
         );
+        return;
       }
+
+      const convT = conversations.get(target);
+      if (!(convT?.type === "fidel" && convT?.status === "CONFIRMED")) {
+        await safeSendMessage(
+          NEGOTIATION_JID,
+          `⚠️ O cliente ${await contactLabel(target)} não está *confirmado*.\n` +
+          `Ele precisa responder *1) Confirmar* antes.`
+        );
+        return;
+      }
+
+      const command = cmdOnly ? cmdOnly[1] : linesCmd[1].trim(); // "1" | "2" | "3"
+      if (command === "1") {
+        await safeSendMessage(target, "✅ *Seu pedido está sendo separado.* Em breve daremos mais detalhes por aqui.");
+      } else if (command === "2") {
+        await safeSendMessage(target, "⏳ *Pedido em fila.* Já já começaremos a separar o seu pedido.");
+      } else {
+        await safeSendMessage(target, "❌ *Seu pedido foi cancelado.* Se precisar, pode enviar um novo pedido a qualquer momento.");
+      }
+      return;
     }
 
-    const detailLines = items.map((it, i) => `• ${it.name} — R$ ${fmt(itemValues[i])}`);
-    detailLines.push(`\n*Total:* R$ ${fmt(total)}`);
+    // ===== 1) Bloco numérico de orçamento (preços) =====
+    const priceLines = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    const looksNumericBlock =
+      priceLines.length > 0 &&
+      priceLines.every((l) => /^[\sR$r$\.,\d()+-]+$/.test(l)) &&
+      /\d/.test(raw) &&
+      !/[A-Za-zÀ-ÿ]/.test(raw.replace(/^(\+?55)?[\d\s().-]+$/, ""));
 
-    await safeSendMessage(
-      target,
-      `💰 *Orçamento do seu pedido:*\n\n${detailLines.join("\n")}\n\n` +
-      `*Deseja confirmar?*\n1) Confirmar\n2) Negociar`
-    );
+    if (looksNumericBlock) {
+      // 1.1) Identificar cliente: telefone na 1ª linha OU último pendente OU último AWAITING_TOTAL
+      let target = null;
+      if (priceLines.length) {
+        const digits = priceLines[0].replace(/\D/g, "");
+        if (digits.length >= 11) {
+          let num = digits.startsWith("55") ? digits : "55" + digits;
+          target = `${num}@c.us`;
+          // remove a linha de telefone, se for só telefone
+          if (digits.length >= 11 && digits.length <= 13) {
+            priceLines.shift();
+          }
+        }
+      }
+      if (!target) {
+        target = lastPendingCustomer || null;
+        if (!target && conversations.size) {
+          let best = null;
+          for (const [jid, cv] of conversations.entries()) {
+            if (cv?.type === "fidel" && cv?.status === "AWAITING_TOTAL") {
+              if (!best || (cv.updatedAt || 0) > (best.updatedAt || 0)) {
+                best = { jid, updatedAt: cv.updatedAt };
+              }
+            }
+          }
+          if (best) target = best.jid;
+        }
+      }
 
-    await safeSendMessage(
-      NEGOTIATION_JID,
-      `✅ Orçamento enviado para ${await contactLabel(target)}.`
-    );
+      if (!target) {
+        await safeSendMessage(
+          NEGOTIATION_JID,
+          "⚠️ Não encontrei cliente pendente.\n" +
+          "👉 Envie o *número do cliente* na primeira linha e, abaixo, os valores."
+        );
+        return;
+      }
 
-    conversations.set(target, {
-      ...conv,
-      status: "QUOTED",
-      quotedLines: itemValues,
-      quotedTotal: total,
-      updatedAt: Date.now(),
-    });
+      const conv = conversations.get(target);
+      if (!(conv?.type === "fidel" && conv.status === "AWAITING_TOTAL")) {
+        await safeSendMessage(
+          NEGOTIATION_JID,
+          `⚠️ O cliente ${await contactLabel(target)} não está aguardando orçamento.\n` +
+          `Peça para ele reenviar o *PEDIDO CEASA* pelo site.`
+        );
+        return;
+      }
 
-    return; // encerra o tratamento do mercador
-    }       // se não era bloco numérico, segue o fluxo normal (pode ser outra conversa sua com o bot)
+      const items = conv.items || [];
+      if (!items.length) {
+        await safeSendMessage(
+          NEGOTIATION_JID,
+          `⚠️ Não encontrei itens para ${await contactLabel(target)}.\n` +
+          `Requisito: o pedido precisa vir do site.`
+        );
+        return;
+      }
+
+      const parsed = parsePricesPerLine(priceLines.join("\n"), items.length);
+      if (!parsed.ok) {
+        await safeSendMessage(
+          NEGOTIATION_JID,
+          `⚠️ ${parsed.reason}\n` +
+          `Formato: *uma linha por item (mesma ordem)* e, se quiser, *a última linha como Total*.\n` +
+          `Exemplo:\n40.00\n35.00\n67.00\n142.00`
+        );
+        return;
+      }
+
+      const { itemValues, totalGiven } = parsed;
+      const computedTotal = itemValues.reduce((a, b) => a + b, 0);
+      const total = Number.isFinite(totalGiven) ? totalGiven : computedTotal;
+
+      if (Number.isFinite(totalGiven)) {
+        const diff = Math.abs(totalGiven - computedTotal);
+        if (diff > 0.01) {
+          await safeSendMessage(
+            NEGOTIATION_JID,
+            `ℹ️ Itens somam R$ ${fmt(computedTotal)} e o total enviado foi R$ ${fmt(totalGiven)}.\n` +
+            `Se foi frete/desconto, ok.`
+          );
+        }
+      }
+
+      const detailLines = items.map((it, i) => `• ${it.name} — R$ ${fmt(itemValues[i])}`);
+      detailLines.push(`\n*Total:* R$ ${fmt(total)}`);
+
+      await safeSendMessage(
+        target,
+        `💰 *Orçamento do seu pedido:*\n\n${detailLines.join("\n")}\n\n` +
+        `*Deseja confirmar?*\n1) Confirmar\n2) Negociar`
+      );
+
+      await safeSendMessage(
+        NEGOTIATION_JID,
+        `✅ Orçamento enviado para ${await contactLabel(target)}.`
+      );
+
+      conversations.set(target, {
+        ...conv,
+        status: "QUOTED",
+        quotedLines: itemValues,
+        quotedTotal: total,
+        updatedAt: Date.now(),
+      });
+
+      return; // encerra o tratamento do mercador (preços)
+    }
+
+    // Se chegou aqui: mensagem do mercador que não é preços nem comando 1/2/3 -> ignora
+    return;
+  } // se não era bloco numérico, segue o fluxo normal (pode ser outra conversa sua com o bot)
 
     /* =========================
        2) PEDIDO CEASA (cliente)
@@ -425,7 +480,7 @@ client.on("message", async (msg) => {
         if (NEGOTIATION_JID) {
           await safeSendMessage(
             NEGOTIATION_JID,
-            `ℹ️ Cliente ${await contactLabel(from)} optou por *NEGOTIAR* diretamente.`
+            `ℹ️ Cliente ${await contactLabel(from)} optou por *NEGOCIAR* diretamente.`
           );
         }
         return;
