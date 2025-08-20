@@ -223,13 +223,19 @@ client.on("message", async (msg) => {
        1) PREÇOS VINDOS DO MERCADOR
        ========================= */
     if (from === NEGOTIATION_JID) {
+      console.log("📥 Preços recebidos do mercador. Linhas:", lines);
       const raw = (msg.body || "").trim();
-      const lines = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+      const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+      // heurística mais relaxada:
+      // - permite + ( ) - espaço
+      // - permite "Total" na última linha (será tratado pelo parse)
+      // - exige pelo menos UMA linha com número
+      const allowed = /^[\sR$r$\.,\d\-()+A-Za-zÀ-ÿ:]+$/;  // letras permitidas (ex: "Total:")
       const looksNumericBlock =
         lines.length > 0 &&
-        lines.every((l) => /^[\sR$r$\.,\d-]+$/.test(l)) &&
-        /\d/.test(raw) &&
-        !/[A-Za-zÀ-ÿ]/.test(raw);
+        lines.every(l => allowed.test(l)) &&
+        lines.some(l => /[\d.,]/.test(l));
 
       if (looksNumericBlock) {
         // identificar cliente pela 1ª linha (telefone) ou último pendente
