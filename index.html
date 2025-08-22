@@ -2,39 +2,22 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Hortifruti CEASA – Pedidos via WhatsApp</title>
+  <title>Comercial Celeiro – Pedidos CEASA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="./site/style.css">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
 </head>
 <body>
-  <i class="leaf-decoration leaf-1 fas fa-leaf"></i>
-  <i class="leaf-decoration leaf-2 fas fa-leaf"></i>
-
-  <!-- Modal de tipo de cliente -->
-  <div id="clientTypeModal" class="modal-backdrop" aria-hidden="true">
-    <div class="modal-card">
-      <h2 class="modal-title">Como você deseja comprar?</h2>
-      <p class="modal-subtitle">Escolha uma opção para personalizar os preços e o atendimento.</p>
-      <div class="modal-actions">
-        <button id="btnSouNovo" class="btn primary"><i class="fas fa-user-plus"></i> Sou novo</button>
-        <button id="btnJaSouCliente" class="btn outline"><i class="fas fa-id-badge"></i> Já sou cliente</button>
-      </div>
-      <p class="modal-hint">
-        <i class="fas fa-info-circle"></i>
-        Clientes fidelizados visualizam os produtos <strong>sem preços</strong>; o valor é calculado pelo lojista.
-      </p>
-    </div>
-  </div>
-
   <header class="header">
     <div class="container">
       <div class="brand">
         <span class="dot" aria-hidden="true"></span>
-        <h1>Hortifruti CEASA</h1>
+        <h1>Comercial <span class="celeiro">Celeiro</span></h1>
       </div>
       <div class="header-actions">
-        <input id="searchInput" type="text" placeholder="Buscar..." />
+        <input id="searchInput" type="text" placeholder="Buscar produto..." />
         <select id="categoryFilter" title="Filtrar categoria">
           <option value="todas">Todas</option>
           <option value="Frutas">Frutas</option>
@@ -50,8 +33,65 @@
     </div>
   </header>
 
+  <!-- hero / boas-vindas + cadastro -->
+  <section class="hero">
+    <div class="container small">
+      <div class="hero-card">
+        <div class="hero-text">
+          <h2>Bem-vindo à <strong>Comercial Celeiro</strong></h2>
+          <p>Preencha seus dados, escolha as variações dos produtos e envie seu pedido. Nós cotamos e retornamos com os valores para você aprovar no WhatsApp.</p>
+          <ul class="hero-points">
+            <li><i class="fas fa-seedling"></i> Atacado CEASA • Barbacena/MG</li>
+            <li><i class="fas fa-road"></i> BR 040 • KM 698 • CEASA</li>
+            <li><i class="fas fa-phone"></i> (32) 3331-9687 • 9983-1534 • 9983-2505</li>
+          </ul>
+        </div>
+        <img class="hero-photo" src="site/assets/fachada.jpg" alt="Comercial Celeiro">
+      </div>
+
+      <form id="clientDataForm" class="client-form" novalidate>
+        <div class="row">
+          <div class="col">
+            <label>Nome completo*</label>
+            <input id="clientFullName" type="text" required>
+          </div>
+          <div class="col">
+            <label>CPF ou CNPJ*</label>
+            <input id="clientDoc" type="text" inputmode="numeric" required placeholder="somente números">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label>Bairro*</label>
+            <input id="addrNeighborhood" type="text" required>
+          </div>
+          <div class="col">
+            <label>Rua / Avenida*</label>
+            <input id="addrStreet" type="text" required>
+          </div>
+          <div class="col col-sm">
+            <label>Número*</label>
+            <input id="addrNumber" type="text" inputmode="numeric" required>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <label>Nome de quem irá receber*</label>
+            <input id="receiverName" type="text" required>
+          </div>
+          <div class="col col-sm">
+            <label><input id="preferTimeChk" type="checkbox"> Tenho preferência por horário</label>
+            <input id="preferTimeInput" type="time" style="display:none;">
+          </div>
+        </div>
+        <label>Observações</label>
+        <textarea id="buyerNotes" rows="2" placeholder="Ponto de referência, bloco/apto, acesso ao local..."></textarea>
+      </form>
+    </div>
+  </section>
+
   <main class="container">
-    <p class="hint"><i class="fas fa-lightbulb"></i> Use vírgula ou ponto (ex: 1,5 kg)</p>
+    <p class="hint"><i class="fas fa-info-circle"></i> Toque em um item para escolher a <strong>variação</strong> (tamanho, embalagem, etc.).</p>
     <section id="catalog" class="grid"></section>
   </main>
 
@@ -65,42 +105,54 @@
         </button>
       </div>
 
-      <div class="client-badge" id="clientBadge"></div>
-
+      <div class="client-badge" id="clientBadge">Pedido para orçamento • valores serão enviados pelo WhatsApp</div>
       <div id="cartItems" class="cart-items"></div>
 
       <div class="cart-footer">
-        <div class="totals" id="totalsBox">
+        <div class="totals" id="totalsBox" style="display:none;">
           <div><strong>Itens:</strong> <span id="totalQty">0</span></div>
           <div><strong>Total:</strong> R$ <span id="totalPrice">0,00</span></div>
         </div>
-        <div class="buyer-info">
-          <input id="buyerName" type="text" placeholder="Seu nome (opcional)" />
-          <textarea id="buyerNotes" rows="2" placeholder="Observações (ponto de entrega, horário)"></textarea>
-        </div>
+
         <button id="checkoutBtn" class="btn primary">
-          <i class="fab fa-whatsapp"></i> Enviar pedido
+          <i class="fab fa-whatsapp"></i> Enviar pedido para análise
         </button>
-        <small class="hint">Preços podem variar. Estoque sujeito à disponibilidade.</small>
+        <small class="hint">Os preços serão calculados e enviados para sua aprovação.</small>
       </div>
     </div>
   </div>
 
   <footer class="footer">
     <div class="container small">
-      <p>Atacado CEASA • Retirada no entreposto ou entrega</p>
+      <p>CEASA • Barbacena • Minas Gerais</p>
     </div>
   </footer>
 
-  <div id="toast" class="toast">
-    <i class="fas fa-check-circle"></i>
-    <span>Item adicionado ao carrinho</span>
-  </div>
-  <pre id="debug" hidden></pre>
+  <div id="toast" class="toast"><i class="fas fa-check-circle"></i><span></span></div>
 
-  <!-- Incluir os scripts na ordem correta -->
+  <!-- Variant Modal -->
+  <div id="variantModal" class="modal-backdrop" aria-hidden="true">
+    <div class="variant-card">
+      <div class="variant-head">
+        <h3 id="variantTitle">Produto</h3>
+        <button id="variantClose" class="icon-btn"><i class="fas fa-times"></i></button>
+      </div>
+      <img id="variantImage" alt="" class="variant-img">
+      <p id="variantDesc" class="muted"></p>
+
+      <div id="variantOptions" class="variant-options"></div>
+
+      <div class="variant-qty">
+        <label>Quantidade</label>
+        <input id="variantQty" type="text" inputmode="decimal" value="1">
+        <small id="variantUnitHint" class="muted"></small>
+      </div>
+
+      <button id="variantAddBtn" class="btn primary"><i class="fas fa-plus"></i> Adicionar ao carrinho</button>
+    </div>
+  </div>
+
   <script src="site/product.js"></script>
-  <script src="site/cart.js"></script>
   <script src="site/app.js"></script>
 </body>
 </html>

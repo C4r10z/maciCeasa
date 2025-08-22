@@ -8,13 +8,16 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 /** ========= CONFIG ========= */
 const TZ = "America/Sao_Paulo";
 const NEGOTIATION_PHONE = "5532991137334"; // WhatsApp do mercador (55 + DDD + número)
-const FORCE_RELOGIN = false; // true só na 1ª execução
-const USE_INSTALLED_CHROME = false;
+const FORCE_RELOGIN = false;                // true só na 1ª execução (gera QR)
+const USE_INSTALLED_CHROME = true;
 const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 
 /** ========= STATE / UTILS ========= */
-const conversations = new Map(); // customerJid -> { type, status, items:[{name,qty,unit}], quotedLines:number[], quotedTotal:number, updatedAt:number }
-let lastPendingCustomer = null;  // cliente pendente para receber orçamento
+const conversations = new Map(); 
+// Map<JID, { type: "novo"|"fidel", status, items, quotedLines, quotedTotal, updatedAt }>
+
+let lastPendingFidelCustomer = null; // cliente fidel aguardando orçamento
+let lastPendingNewCustomer   = null; // cliente novo aguardando ação do mercador
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => moment().tz(TZ).format("DD/MM/YYYY HH:mm");
@@ -28,18 +31,14 @@ function debugJid(jid) {
   return JSON.stringify(jid);
 }
 
-// Deixe os detectores robustos aos asteriscos do WhatsApp.
+// Detectores robustos
 function isOrderMessageText(t) {
   const s = String(t || "");
-  // Aceita com ou sem asteriscos, maiúsculas/minúsculas, e qualquer espaçamento
   return /\bpedido\s*ceasa\b/i.test(s.replace(/\*/g, ""));
 }
-
 function isFidelizadoMarker(t) {
   const s = String(t || "");
-  // Remove asteriscos e aceita "TIPO: FIDELIZADO" com variações
   const noStars = s.replace(/\*/g, "");
-  // "tipo" seguido de até 10 caracteres não-alfabéticos (":", espaço, "-") e depois "fideli..."
   return /\btipo\b[^a-zA-Z]{0,10}fideli/i.test(noStars);
 }
 
@@ -58,7 +57,7 @@ function parseItemsFromOrder(orderText) {
     const m = line.match(/^\s*\d+\.\s*(.+?)\s+—\s+([\d.,]+)\s+(.+?)\s*$/);
     if (m) {
       const name = m[1].trim();
-      const qty = parseFloat(String(m[2]).replace(",", "."));
+      const qty = parseFloat(String(m[2]).replace(",", ".")); // 1,5 -> 1.5
       const unit = m[3].trim();
       items.push({ name, qty, unit });
     }
@@ -119,11 +118,6 @@ const client = new Client({
         ? CHROME_PATH
         : process.env.CHROME_PATH || undefined,
   },
-  webVersionCache: {
-    type: "remote",
-    remotePath:
-      "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html",
-  },
 });
 
 let SELF_JID = null;
@@ -131,9 +125,8 @@ let NEGOTIATION_JID = null;
 
 client.on("qr", (qr) => {
   console.log("\n📲 Escaneie o QR abaixo para logar no WhatsApp do ROBÔ:\n");
-  try {
-    qrcode.generate(qr, { small: true });
-  } catch (e) {
+  try { qrcode.generate(qr, { small: true }); }
+  catch (e) {
     console.error("Falha ao renderizar QR no terminal:", e?.message || e);
     console.log("QR (string):", qr);
   }
@@ -172,6 +165,7 @@ client.on("disconnected", (r) => console.log("🔌 Desconectado:", r));
 
 client.initialize();
 
+/** ========= HELPERS ========= */
 async function safeSendMessage(jid, content, opts = {}) {
   const debugJidStr = debugJid(jid);
   console.log(`📤 Tentando enviar para: ${debugJidStr}`);
@@ -213,6 +207,26 @@ async function contactLabel(jid) {
   }
 }
 
+/** Mensagens-UI (texto) */
+async function sendClientConfirmUI(to) {
+  return safeSendMessage(
+    to,
+    "*Deseja confirmar?*\n" +
+    "1) Confirmar\n" +
+    "2) Negociar"
+  );
+}
+async function sendMerchantActionUI() {
+  return safeSendMessage(
+    NEGOTIATION_JID,
+    "*Ação para o pedido (somente mercador):*\n" +
+    "3) Separar pedido\n" +
+    "4) Aguardar\n" +
+    "5) Cancelar\n\n" +
+    "_Dica: você pode enviar o telefone do cliente na 1ª linha e o número da ação na 2ª._"
+  );
+}
+
 /** ========= HANDLERS ========= */
 client.on("message", async (msg) => {
   try {
@@ -226,25 +240,23 @@ client.on("message", async (msg) => {
     }
     if (!from.includes("@c.us")) from = `${from}@c.us`;
 
-    // Corpo padronizado
-    const body = (msg.body || "");
+    const body = (msg.body || "").trim();
     const lower = body.toLowerCase();
-    console.log(`📩 Mensagem recebida de: ${from}`);
+    console.log(`📩 Mensagem recebida de: ${from} body="${body}"`);
 
     /* ============================================================
-       0) MERCADOR: comandos e/ou bloco de preços (NEGOTIATION_JID)
+       0) MERCADOR (NEGOTIATION_JID): ações 3/4/5 e bloco de preços
        ============================================================ */
     if (from === NEGOTIATION_JID) {
-      const raw = body.trim();
-      const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const lines = body.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
-      // 0.1) Comandos 1/2/3 (com ou sem telefone na primeira linha)
+      // --- 0.1) Ações 3/4/5 ---
+      const isSingleCmd = /^[345]$/.test(lines[0] || "");
       const firstDigits = (lines[0] || "").replace(/\D/g, "");
-      const secondIsCmd = lines[1] && /^[123]$/.test(lines[1]);
-      const cmdOnly = (lines.length === 1 && /^[123]$/.test(lines[0]));
+      const secondIsCmd = /^[345]$/.test(lines[1] || "");
 
-      if (cmdOnly || (firstDigits.length >= 11 && secondIsCmd)) {
-        // Resolve alvo
+      if (isSingleCmd || (firstDigits.length >= 11 && secondIsCmd)) {
+        // Resolve o alvo
         let target = null;
         if (firstDigits.length >= 11 && secondIsCmd) {
           let num = firstDigits.startsWith("55") ? firstDigits : "55" + firstDigits;
@@ -263,9 +275,10 @@ client.on("message", async (msg) => {
 
           // Senão, cliente fidel "confirmado" mais recente
           if (!target) {
+            best = null;
             for (const [jid, cv] of conversations.entries()) {
               if (cv?.type === "fidel" && cv?.status === "CONFIRMED") {
-                if (!best || (cv.updatedAt || 0) > (best?.updatedAt || 0)) {
+                if (!best || (cv.updatedAt || 0) > (best.updatedAt || 0)) {
                   best = { jid, updatedAt: cv.updatedAt };
                 }
               }
@@ -277,25 +290,23 @@ client.on("message", async (msg) => {
         if (!target) {
           await safeSendMessage(
             NEGOTIATION_JID,
-            "⚠️ Não encontrei cliente alvo.\n" +
-            "Envie:\n• `1`/`2`/`3` (aplica ao *novo* pendente mais recente, senão ao *confirmado* mais recente),\n" +
-            "• ou duas linhas: telefone ↵ comando (ex.: `+5532...` ↵ `1`)."
+            "⚠️ Não encontrei um cliente alvo para esta ação.\nAguarde um novo pedido ou um cliente fidel confirmar orçamento."
           );
           return;
         }
 
         const convT = conversations.get(target);
-        const command = cmdOnly ? lines[0] : lines[1].trim(); // "1" | "2" | "3"
+        const cmd = isSingleCmd ? lines[0] : lines[1];
 
         // Cliente novo aguardando ação do mercador
         if (convT?.type === "novo" && convT?.status === "PENDING_MERCHANT") {
-          if (command === "1") {
+          if (cmd === "3") {
             await safeSendMessage(target, "✅ *Seu pedido está sendo separado.* Em breve daremos mais detalhes por aqui.");
             conversations.set(target, { ...convT, status: "IN_PROGRESS", updatedAt: Date.now() });
-          } else if (command === "2") {
+          } else if (cmd === "4") {
             await safeSendMessage(target, "⏳ *Pedido em fila.* Já já começaremos a separar o seu pedido.");
             conversations.set(target, { ...convT, status: "QUEUED", updatedAt: Date.now() });
-          } else {
+          } else if (cmd === "5") {
             await safeSendMessage(target, "❌ *Seu pedido foi cancelado.* Se precisar, pode enviar um novo pedido a qualquer momento.");
             conversations.set(target, { ...convT, status: "CANCELED", updatedAt: Date.now() });
           }
@@ -304,11 +315,11 @@ client.on("message", async (msg) => {
 
         // Cliente fidel já confirmado (pós-orçamento)
         if (convT?.type === "fidel" && convT?.status === "CONFIRMED") {
-          if (command === "1") {
+          if (cmd === "3") {
             await safeSendMessage(target, "✅ *Seu pedido está sendo separado.* Em breve daremos mais detalhes por aqui.");
-          } else if (command === "2") {
+          } else if (cmd === "4") {
             await safeSendMessage(target, "⏳ *Pedido em fila.* Já já começaremos a separar o seu pedido.");
-          } else {
+          } else if (cmd === "5") {
             await safeSendMessage(target, "❌ *Seu pedido foi cancelado.* Se precisar, pode enviar um novo pedido a qualquer momento.");
           }
           return;
@@ -316,17 +327,18 @@ client.on("message", async (msg) => {
 
         await safeSendMessage(
           NEGOTIATION_JID,
-          `⚠️ O cliente ${await contactLabel(target)} não está em um estado compatível com o comando.\n` +
+          `⚠️ O cliente ${await contactLabel(target)} não está em um estado compatível com a ação.\n` +
           `• NOVO deve estar *PENDING_MERCHANT*.\n` +
           `• FIDEL deve estar *CONFIRMED*.`
         );
         return;
       }
 
-      // 0.2) Bloco numérico (orçamento fidel)
+      // --- 0.2) Bloco numérico (orçamento fidel) ---
+      const raw = body;
       const looksNumericBlock =
         lines.length > 0 &&
-        lines.every(l => /^[\sR$r$\.,\d-]+$/.test(l)) &&
+        lines.every((l) => /^[\sR$r$\.,\d-]+$/.test(l)) &&
         /\d/.test(raw) &&
         !/[A-Za-zÀ-ÿ]/.test(raw);
 
@@ -357,7 +369,7 @@ client.on("message", async (msg) => {
           await safeSendMessage(
             NEGOTIATION_JID,
             "⚠️ Não há cliente fidel pendente para orçamento.\n" +
-            "Envie o *número do cliente* na primeira linha (ex.: +553298661836) e, abaixo, os valores."
+              "Envie o *número do cliente* na primeira linha (ex.: +553298661836) e, abaixo, os valores."
           );
           return;
         }
@@ -367,7 +379,7 @@ client.on("message", async (msg) => {
           await safeSendMessage(
             NEGOTIATION_JID,
             `⚠️ O cliente ${await contactLabel(target)} não está aguardando orçamento.\n` +
-            `Peça para ele reenviar o *PEDIDO CEASA* pelo site.`
+              `Peça para ele reenviar o *PEDIDO CEASA* pelo site.`
           );
           return;
         }
@@ -377,7 +389,7 @@ client.on("message", async (msg) => {
           await safeSendMessage(
             NEGOTIATION_JID,
             `⚠️ Não encontrei itens para ${await contactLabel(target)}.\n` +
-            `Requisito: o pedido precisa vir do site.`
+              `Requisito: o pedido precisa vir do site.`
           );
           return;
         }
@@ -387,8 +399,8 @@ client.on("message", async (msg) => {
           await safeSendMessage(
             NEGOTIATION_JID,
             `⚠️ ${parsed.reason}\n` +
-            `Formato: *uma linha por item (mesma ordem)* e, se quiser, *a última linha como Total*.\n` +
-            `Exemplo:\n40.00\n35.00\n67.00\n142.00`
+              `Formato: *uma linha por item (mesma ordem)* e, se quiser, *a última linha como Total*.\n` +
+              `Exemplo:\n40.00\n35.00\n67.00\n142.00`
           );
           return;
         }
@@ -403,7 +415,7 @@ client.on("message", async (msg) => {
             await safeSendMessage(
               NEGOTIATION_JID,
               `ℹ️ Itens somam R$ ${fmt(computedTotal)} e o total enviado foi R$ ${fmt(totalGiven)}.\n` +
-              `Se foi frete/desconto, ok.`
+                `Se foi frete/desconto, ok.`
             );
           }
         }
@@ -413,9 +425,9 @@ client.on("message", async (msg) => {
 
         await safeSendMessage(
           target,
-          `💰 *Orçamento do seu pedido:*\n\n${detailLines.join("\n")}\n\n` +
-          `*Deseja confirmar?*\n1) Confirmar\n2) Negociar`
+          `💰 *Orçamento do seu pedido:*\n\n${detailLines.join("\n")}`
         );
+        await sendClientConfirmUI(target);
 
         await safeSendMessage(
           NEGOTIATION_JID,
@@ -432,7 +444,7 @@ client.on("message", async (msg) => {
         return;
       }
 
-      // Se não era comando nem bloco numérico, deixa cair para os demais fluxos (saudação etc.)
+      // Se não era ação 3/4/5 nem bloco numérico, segue fluxos gerais (saudação etc.)
     }
 
     /* =========================================
@@ -448,9 +460,8 @@ client.on("message", async (msg) => {
         updatedAt: Date.now(),
       });
 
-      if (fidel) {
-        lastPendingCustomer = from; // só para fidel (orçamento)
-      }
+      if (fidel) lastPendingFidelCustomer = from;
+      else      lastPendingNewCustomer   = from;
 
       await (await msg.getChat()).sendStateTyping();
       await delay(400);
@@ -465,39 +476,33 @@ client.on("message", async (msg) => {
         const header =
           `🧾 *Novo pedido* de ${await contactLabel(from)}\n` +
           (fidel ? "Tipo: FIDELIZADO (sem preços)\n" : "Tipo: NOVO\n");
-        const tailForNew =
-          "\n*Responda aqui para agir com o cliente (novo):*\n" +
-          "1) Separar pedido\n" +
-          "2) Aguardar\n" +
-          "3) Cancelar\n\n" +
-          "Opcional: primeira linha telefone, segunda o comando (ex.: `+5532...` ↵ `1`).";
 
-        await safeSendMessage(
-          NEGOTIATION_JID,
-          header + `\n${body}` + (fidel ? "" : `\n${tailForNew}`)
-        );
+        await safeSendMessage(NEGOTIATION_JID, header + `\n${body}`);
+
+        // Se for NOVO, manda as ações 3/4/5 ao mercador
+        if (!fidel) await sendMerchantActionUI();
       }
       return;
     }
 
     /* =========================================
-       2) Respostas do cliente após orçamento (fidel)
+       2) Respostas do CLIENTE (1/2)
        ========================================= */
     const conv = conversations.get(from);
     if (conv?.type === "fidel" && conv?.status === "QUOTED") {
-      if (/^(1\b|confirmar)/.test(lower)) {
+      if (/^1$/.test(body)) {
         conversations.set(from, { ...conv, status: "CONFIRMED", updatedAt: Date.now() });
         await safeSendMessage(from, "🎉 *Pedido confirmado!* Vamos te manter informado por aqui.");
         if (NEGOTIATION_JID) {
           await safeSendMessage(
             NEGOTIATION_JID,
-            `✅ Cliente ${await contactLabel(from)} *CONFIRMOU* o orçamento.\n\n` +
-            `*Próximo passo (no chat do cliente):*\n1) Separar pedido\n2) Aguardar\n3) Cancelar`
+            `✅ Cliente ${await contactLabel(from)} *CONFIRMOU* o orçamento.\n` +
+            `Ações: 3) Separar • 4) Aguardar • 5) Cancelar`
           );
         }
         return;
       }
-      if (/^(2\b|negociar)/.test(lower)) {
+      if (/^2$/.test(body)) {
         conversations.set(from, { ...conv, status: "NEGOTIATION", updatedAt: Date.now() });
         await safeSendMessage(from, `🤝 Sem problemas! Fale direto com o lojista: https://wa.me/${NEGOTIATION_PHONE}`);
         if (NEGOTIATION_JID) {
@@ -508,8 +513,8 @@ client.on("message", async (msg) => {
         }
         return;
       }
-      if (/confirm|negociar|^1$|^2$/i.test(lower)) {
-        await safeSendMessage(from, "Use *1) Confirmar* ou *2) Negociar* (pode enviar apenas '1' ou '2').");
+      if (/^(confirmar|negociar)$/i.test(lower)) {
+        await safeSendMessage(from, "Use apenas os números:\n1) Confirmar\n2) Negociar");
         return;
       }
     }
@@ -522,7 +527,9 @@ client.on("message", async (msg) => {
       await delay(300);
       await safeSendMessage(
         from,
-        "Olá! Sou o *robô CEASA*. Envie seu *PEDIDO CEASA* pelo site. Se for *cliente fidelizado*, calculamos e te retornamos aqui. 🍅🥬"
+        "Olá! Sou o *robô CEASA*. Envie seu *PEDIDO CEASA* pelo site.\n" +
+        "• Cliente fidelizado: calculo do orçamento aqui.\n" +
+        "• Cliente novo: o mercador te responde com os próximos passos."
       );
     }
   } catch (e) {
