@@ -83,10 +83,12 @@
             <label>Nome de quem irá receber*</label>
             <input id="receiverName" type="text" required>
           </div>
-          <div class="col col-sm">
-            <label><input id="preferTimeChk" type="checkbox"> Tenho preferência por horário</label>
-            <input id="preferTimeInput" type="time" style="display:none;">
-          </div>
+<label style="display:flex; gap:8px; align-items:center; user-select:none; margin-top:4px;">
+  <input id="preferTimeChk" type="checkbox" />
+  <span>Tenho preferência por horário</span>
+</label>
+<input id="preferTimeInput" type="time" style="display:none;" />
+
         </div>
         <label for="buyerNotes">Observações</label>
         <textarea id="buyerNotes" rows="4" placeholder="Ex: Deixar na portaria, trocar alface por rúcula..." style="width:100%;resize:vertical"></textarea>

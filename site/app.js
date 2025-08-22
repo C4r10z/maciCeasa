@@ -3,8 +3,8 @@ let cart = [];
 let clientFullName = "";
 let clientDoc = ""; // só dígitos
 
-// Config do WhatsApp do robô
-const WHATSAPP_NUMBER = "5532984685261"; // AJUSTE AQUI
+// WhatsApp do robô (AJUSTE AQUI)
+const WHATSAPP_NUMBER = "5532984685261";
 
 // ====== MEMÓRIA DO CLIENTE (persistente no aparelho) ======
 const USER_KEY = "ceasa_user_v1";
@@ -13,13 +13,11 @@ const USER_KEY = "ceasa_user_v1";
 function defaultUser() {
   return {
     fullName: "",
-    docDigits: "",  // só números
+    docDigits: "",  // só números (CPF/CNPJ sem máscara)
     addrNeighborhood: "",
     addrStreet: "",
     addrNumber: "",
     receiverName: "",
-    preferTimeEnabled: false,
-    preferTime: "",
     notes: ""
   };
 }
@@ -59,26 +57,24 @@ function maskCpfCnpj(digits) {
     .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d{1,2}).*/, "$1-$2");
 }
 
-
 document.addEventListener("DOMContentLoaded", () => {
-  // ===== Refs do DOM (capte TUDO primeiro) =====
-  const catalogEl      = document.getElementById("catalog");
-  const searchInput    = document.getElementById("searchInput");
-  const categoryFilter = document.getElementById("categoryFilter");
-  const openCartBtn    = document.getElementById("openCartBtn");
-  const closeCartBtn   = document.getElementById("closeCartBtn");
-  const cartDrawer     = document.getElementById("cartDrawer");
-  const cartItemsEl    = document.getElementById("cartItems");
-  const cartCount      = document.getElementById("cartCount");
-  const totalQtyEl     = document.getElementById("totalQty");
-  const totalPriceEl   = document.getElementById("totalPrice"); // oculto neste fluxo
-  const checkoutBtn    = document.getElementById("checkoutBtn");
-  const buyerNotesEl   = document.getElementById("buyerNotes");
+  // ===== Refs do DOM =====
+  const catalogEl        = document.getElementById("catalog");
+  const searchInput      = document.getElementById("searchInput");
+  const categoryFilter   = document.getElementById("categoryFilter");
+  const openCartBtn      = document.getElementById("openCartBtn");
+  const closeCartBtn     = document.getElementById("closeCartBtn");
+  const cartDrawer       = document.getElementById("cartDrawer");
+  const cartItemsEl      = document.getElementById("cartItems");
+  const cartCount        = document.getElementById("cartCount");
+  const totalQtyEl       = document.getElementById("totalQty");
+  const totalPriceEl     = document.getElementById("totalPrice"); // oculto neste fluxo
+  const checkoutBtn      = document.getElementById("checkoutBtn");
+  const buyerNotesEl     = document.getElementById("buyerNotes");
 
   // formulário do cliente (entrega)
-  const clientDataForm   = document.getElementById("clientDataForm");
-  const clientFullNameEl = document.getElementById("clientFullName");
-  const clientDocEl      = document.getElementById("clientDoc");
+  const clientFullNameEl   = document.getElementById("clientFullName");
+  const clientDocEl        = document.getElementById("clientDoc");
   const addrNeighborhoodEl = document.getElementById("addrNeighborhood");
   const addrStreetEl       = document.getElementById("addrStreet");
   const addrNumberEl       = document.getElementById("addrNumber");
@@ -97,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnClose    = document.getElementById("variantClose");
   const btnAdd      = document.getElementById("variantAddBtn");
 
-  // ===== Utilidades =====
+  // ===== Utils =====
   function showToast(text){
     const t = document.getElementById("toast");
     if (!t) return;
@@ -120,14 +116,13 @@ document.addEventListener("DOMContentLoaded", () => {
   if (addrStreetEl)       addrStreetEl.value       = user.addrStreet || "";
   if (addrNumberEl)       addrNumberEl.value       = user.addrNumber || "";
   if (receiverNameEl)     receiverNameEl.value     = user.receiverName || "";
-  if (preferTimeChk)      preferTimeChk.checked    = !!user.preferTimeEnabled;
-  if (preferTimeInput) {
-    preferTimeInput.style.display = user.preferTimeEnabled ? "" : "none";
-    preferTimeInput.value = user.preferTime || "";
-  }
-  if (buyerNotesEl) buyerNotesEl.value = user.notes || "";
+  if (buyerNotesEl)       buyerNotesEl.value       = user.notes || "";
 
-  // Salva conforme digita
+  // Campo de horário: sempre inicia oculto (não persiste)
+  if (preferTimeChk)   preferTimeChk.checked = false;
+  if (preferTimeInput) preferTimeInput.style.display = "none";
+
+  // Salvar conforme digita (dados persistentes: nome/doc/endereço/obs)
   const saveText = (key, el) => saveUser({ [key]: (el.value || "").trim() });
   clientFullNameEl?.addEventListener("input", () => saveText("fullName", clientFullNameEl));
   clientDocEl?.addEventListener("input", () => {
@@ -135,23 +130,18 @@ document.addEventListener("DOMContentLoaded", () => {
     clientDocEl.value = maskCpfCnpj(digits);
     saveUser({ docDigits: digits });
   });
-
   addrNeighborhoodEl?.addEventListener("input", () => saveText("addrNeighborhood", addrNeighborhoodEl));
   addrStreetEl?.addEventListener("input",       () => saveText("addrStreet", addrStreetEl));
   addrNumberEl?.addEventListener("input",       () => saveText("addrNumber", addrNumberEl));
   receiverNameEl?.addEventListener("input",     () => saveText("receiverName", receiverNameEl));
+  buyerNotesEl?.addEventListener("input",       () => saveText("notes", buyerNotesEl));
 
+  // Toggle do campo de horário (não persiste)
   preferTimeChk?.addEventListener("change", () => {
-    const enabled = !!preferTimeChk.checked;
-    preferTimeInput.style.display = enabled ? "" : "none";
-    if (!enabled) preferTimeInput.value = "";
-    saveUser({ preferTimeEnabled: enabled, preferTime: enabled ? preferTimeInput.value : "" });
+    const on = !!preferTimeChk.checked;
+    preferTimeInput.style.display = on ? "" : "none";
+    if (!on) preferTimeInput.value = "";
   });
-  preferTimeInput?.addEventListener("change", () => {
-    saveUser({ preferTimeEnabled: !!preferTimeChk.checked, preferTime: preferTimeInput.value });
-  });
-
-  buyerNotesEl?.addEventListener("input", () => saveText("notes", buyerNotesEl));
 
   // ===== Variant modal =====
   let currentProduct = null;
@@ -205,10 +195,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.remove('variants-open');
     currentProduct = currentVariant = null; currentVariants = [];
   }
-  btnClose.addEventListener('click', closeVariants);
-  modal.addEventListener('click', (e)=>{ if(e.target===modal) closeVariants(); });
+  btnClose?.addEventListener('click', closeVariants);
+  modal?.addEventListener('click', (e)=>{ if(e.target===modal) closeVariants(); });
 
-  btnAdd.addEventListener('click', () => {
+  btnAdd?.addEventListener('click', () => {
     const q = Math.max(0.1, parseQty(qtyInput.value || 1));
     const item = {
       id: currentProduct.id,
@@ -231,13 +221,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== Catálogo =====
   function renderCatalog(){
-    const q = (searchInput.value || "").toLowerCase();
-    const cat = categoryFilter.value;
+    const q = (searchInput?.value || "").toLowerCase();
+    const cat = categoryFilter?.value || "todas";
     const filtered = (window.PRODUCTS||[]).filter(p=>{
       const mt = p.name.toLowerCase().includes(q);
-      const mc = (cat==='todas') ? true : p.category===cat;
+      const mc = (cat === 'todas') ? true : p.category === cat;
       return mt && mc;
     });
+
+    if (!catalogEl) return;
 
     catalogEl.innerHTML = filtered.map(p => `
       <article class="card" data-id="${p.id}">
@@ -259,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  catalogEl.addEventListener("click", (e)=>{
+  catalogEl?.addEventListener("click", (e)=>{
     const card = e.target.closest(".card");
     if(!card) return;
     if(e.target.closest(".choose")){
@@ -272,41 +264,45 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===== Carrinho =====
   function updateCartUI(){
     const itemsCount = cart.reduce((s,x)=>s+x.qty,0);
-    cartCount.textContent = itemsCount.toFixed(1);
+    if (cartCount) cartCount.textContent = itemsCount.toFixed(1);
 
     if(!cart.length){
-      cartItemsEl.innerHTML = `<div class="empty">
-        <i class="fas fa-shopping-basket" style="font-size:2rem;margin-bottom:8px"></i>
-        <p>Seu carrinho está vazio.</p>
-      </div>`;
-      totalQtyEl.textContent = "0";
-      totalPriceEl && (totalPriceEl.textContent = "0,00");
+      if (cartItemsEl) {
+        cartItemsEl.innerHTML = `<div class="empty">
+          <i class="fas fa-shopping-basket" style="font-size:2rem;margin-bottom:8px"></i>
+          <p>Seu carrinho está vazio.</p>
+        </div>`;
+      }
+      if (totalQtyEl) totalQtyEl.textContent = "0";
+      if (totalPriceEl) totalPriceEl.textContent = "0,00";
       return;
     }
 
-    cartItemsEl.innerHTML = cart.map(x=>`
-      <div class="cart-row">
-        <img src="${x.image}" alt="${x.name}">
-        <div class="line">
-          <strong>${x.name}</strong>
-          <small class="muted">${x.variantLabel} • ${x.qty.toFixed(1)} ${x.unit}</small>
-          <div class="actions" style="display:flex;gap:6px;align-items:center;margin-top:5px">
-            <button class="icon-btn dec" data-id="${x.id}" data-vid="${x.variantId}"><i class="fas fa-minus"></i></button>
-            <span style="font-weight:600">${x.qty.toFixed(1)} ${x.unit}</span>
-            <button class="icon-btn inc" data-id="${x.id}" data-vid="${x.variantId}"><i class="fas fa-plus"></i></button>
-            <button class="icon-btn remove" data-id="${x.id}" data-vid="${x.variantId}" style="margin-left:auto;border-color:#fca5a5;color:#b91c1c">
-              <i class="fas fa-trash"></i>
-            </button>
+    if (cartItemsEl) {
+      cartItemsEl.innerHTML = cart.map(x=>`
+        <div class="cart-row">
+          <img src="${x.image}" alt="${x.name}">
+          <div class="line">
+            <strong>${x.name}</strong>
+            <small class="muted">${x.variantLabel} • ${x.qty.toFixed(1)} ${x.unit}</small>
+            <div class="actions" style="display:flex;gap:6px;align-items:center;margin-top:5px">
+              <button class="icon-btn dec" data-id="${x.id}" data-vid="${x.variantId}"><i class="fas fa-minus"></i></button>
+              <span style="font-weight:600">${x.qty.toFixed(1)} ${x.unit}</span>
+              <button class="icon-btn inc" data-id="${x.id}" data-vid="${x.variantId}"><i class="fas fa-plus"></i></button>
+              <button class="icon-btn remove" data-id="${x.id}" data-vid="${x.variantId}" style="margin-left:auto;border-color:#fca5a5;color:#b91c1c">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    `).join("");
+      `).join("");
+    }
 
     const totalQty = cart.reduce((s,x)=>s+x.qty,0);
-    totalQtyEl.textContent = totalQty.toFixed(1);
+    if (totalQtyEl) totalQtyEl.textContent = totalQty.toFixed(1);
   }
 
-  cartItemsEl.addEventListener("click",(e)=>{
+  cartItemsEl?.addEventListener("click",(e)=>{
     const dec = e.target.closest(".dec");
     const inc = e.target.closest(".inc");
     const rem = e.target.closest(".remove");
@@ -331,15 +327,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function openCart(){
-    cartDrawer.classList.add("open");
-    cartDrawer.setAttribute("aria-hidden","false");
+    cartDrawer?.classList.add("open");
+    cartDrawer?.setAttribute("aria-hidden","false");
     updateCartUI();
   }
   function closeCart(){
-    cartDrawer.classList.remove("open");
-    cartDrawer.setAttribute("aria-hidden","true");
+    cartDrawer?.classList.remove("open");
+    cartDrawer?.setAttribute("aria-hidden","true");
   }
-  cartDrawer.addEventListener("click",(e)=>{ if(e.target===cartDrawer) closeCart(); });
+  cartDrawer?.addEventListener("click",(e)=>{ if(e.target===cartDrawer) closeCart(); });
 
   // ===== WhatsApp =====
   function buildWhatsappMessage(){
@@ -362,8 +358,8 @@ document.addEventListener("DOMContentLoaded", () => {
       text += `Recebedor: ${encodeURIComponent(recebedor)}%0A`;
     }
 
-    if (u.preferTimeEnabled && u.preferTime) {
-      text += `%0A*Preferência de horário:* ${encodeURIComponent(u.preferTime)}%0A`;
+    if (preferTimeChk && preferTimeChk.checked && preferTimeInput && preferTimeInput.value) {
+      text += `%0A*Preferência de horário:* ${encodeURIComponent(preferTimeInput.value)}%0A`;
     }
 
     text += `%0A*Itens:*%0A`;
@@ -371,8 +367,8 @@ document.addEventListener("DOMContentLoaded", () => {
       text += `${idx+1}. ${encodeURIComponent(x.name)} — ${x.qty.toFixed(1)} ${encodeURIComponent(x.unit)}%0A`;
     });
 
-    if ((u.notes || "").trim()){
-      text += `%0A*Observações:* ${encodeURIComponent(u.notes.trim())}%0A`;
+    if ((user.notes || "").trim()){
+      text += `%0A*Observações:* ${encodeURIComponent(user.notes.trim())}%0A`;
     }
 
     text += `%0A*Origem:* Catálogo CEASA (web)`;
@@ -402,19 +398,21 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===== Eventos globais =====
-  searchInput.addEventListener("input", renderCatalog);
-  categoryFilter.addEventListener("change", renderCatalog);
-  openCartBtn.addEventListener("click", openCart);
-  closeCartBtn.addEventListener("click", closeCart);
-  checkoutBtn.addEventListener("click", checkout);
+  searchInput?.addEventListener("input", renderCatalog);
+  categoryFilter?.addEventListener("change", renderCatalog);
+  openCartBtn?.addEventListener("click", openCart);
+  closeCartBtn?.addEventListener("click", closeCart);
+  checkoutBtn?.addEventListener("click", checkout);
 
   // swipe close mobile
   let touchStartX = 0;
-  cartDrawer.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
-  cartDrawer.addEventListener('touchend',   e => { const dx = e.changedTouches[0].screenX - touchStartX; if (dx > 100) closeCart(); }, false);
+  cartDrawer?.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, false);
+  cartDrawer?.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    if (dx > 100) closeCart();
+  }, false);
 
   // init
   renderCatalog();
   updateCartUI();
 });
-
