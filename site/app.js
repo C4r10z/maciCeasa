@@ -6,8 +6,62 @@ let clientDoc = ""; // só dígitos
 // Config do WhatsApp do robô
 const WHATSAPP_NUMBER = "5532984685261"; // AJUSTE AQUI
 
+// ====== MEMÓRIA DO CLIENTE (persistente no aparelho) ======
+const USER_KEY = "ceasa_user_v1";
+
+// estrutura padrão
+function defaultUser() {
+  return {
+    fullName: "",
+    docDigits: "",  // só números
+    addrNeighborhood: "",
+    addrStreet: "",
+    addrNumber: "",
+    receiverName: "",
+    preferTimeEnabled: false,
+    preferTime: "",
+    notes: ""
+  };
+}
+
+function loadUser() {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw) return defaultUser();
+    const u = JSON.parse(raw);
+    return { ...defaultUser(), ...u };
+  } catch {
+    return defaultUser();
+  }
+}
+
+function saveUser(partial) {
+  const merged = { ...loadUser(), ...(partial || {}) };
+  localStorage.setItem(USER_KEY, JSON.stringify(merged));
+  return merged;
+}
+
+// máscara visual para CPF/CNPJ
+function maskCpfCnpj(digits) {
+  const d = (digits || "").replace(/\D/g, "");
+  if (d.length <= 11) {
+    // CPF
+    return d
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3}\.\d{3}\.\d{3})(\d{1,2}).*/, "$1-$2");
+  }
+  // CNPJ
+  return d
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
+    .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d{1,2}).*/, "$1-$2");
+}
+
+
 document.addEventListener("DOMContentLoaded", () => {
-  // DOM
+  // ===== Refs do DOM (capte TUDO primeiro) =====
   const catalogEl      = document.getElementById("catalog");
   const searchInput    = document.getElementById("searchInput");
   const categoryFilter = document.getElementById("categoryFilter");
@@ -21,18 +75,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const checkoutBtn    = document.getElementById("checkoutBtn");
   const buyerNotesEl   = document.getElementById("buyerNotes");
 
-  // form cliente
+  // formulário do cliente (entrega)
   const clientDataForm   = document.getElementById("clientDataForm");
   const clientFullNameEl = document.getElementById("clientFullName");
   const clientDocEl      = document.getElementById("clientDoc");
-  const addrNeighborhood = document.getElementById("addrNeighborhood");
-  const addrStreet       = document.getElementById("addrStreet");
-  const addrNumber       = document.getElementById("addrNumber");
-  const receiverName     = document.getElementById("receiverName");
-  const preferTimeChk    = document.getElementById("preferTimeChk");
-  const preferTimeInput  = document.getElementById("preferTimeInput");
+  const addrNeighborhoodEl = document.getElementById("addrNeighborhood");
+  const addrStreetEl       = document.getElementById("addrStreet");
+  const addrNumberEl       = document.getElementById("addrNumber");
+  const receiverNameEl     = document.getElementById("receiverName");
+  const preferTimeChk      = document.getElementById("preferTimeChk");
+  const preferTimeInput    = document.getElementById("preferTimeInput");
 
-  // modal variações
+  // modal de variações
   const modal       = document.getElementById("variantModal");
   const modalTitle  = document.getElementById("variantTitle");
   const modalImg    = document.getElementById("variantImage");
@@ -43,27 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnClose    = document.getElementById("variantClose");
   const btnAdd      = document.getElementById("variantAddBtn");
 
-  // máscaras doc
-  const formatCpf = d => d
-    .replace(/^(\d{3})(\d)/, "$1.$2")
-    .replace(/^(\d{3}\.\d{3})(\d)/, "$1.$2")
-    .replace(/^(\d{3}\.\d{3}\.\d{3})(\d{1,2}).*/, "$1-$2");
-  const formatCnpj = d => d
-    .replace(/^(\d{2})(\d)/, "$1.$2")
-    .replace(/^(\d{2}\.\d{3})(\d)/, "$1.$2")
-    .replace(/^(\d{2}\.\d{3}\.\d{3})(\d)/, "$1/$2")
-    .replace(/^(\d{2}\.\d{3}\.\d{3}\/\d{4})(\d{1,2}).*/, "$1-$2");
-  clientDocEl?.addEventListener("input", () => {
-    let digits = clientDocEl.value.replace(/\D/g, "").slice(0, 14);
-    clientDocEl.value = digits.length <= 11 ? formatCpf(digits) : formatCnpj(digits);
-  });
-
-  preferTimeChk?.addEventListener("change", () => {
-    preferTimeInput.style.display = preferTimeChk.checked ? "" : "none";
-    if (!preferTimeChk.checked) preferTimeInput.value = "";
-  });
-
-  // helpers
+  // ===== Utilidades =====
   function showToast(text){
     const t = document.getElementById("toast");
     if (!t) return;
@@ -78,7 +112,48 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? n : NaN;
   }
 
-  // ===== VARIANT MODAL =====
+  // ===== Pré-preencher com localStorage =====
+  const user = loadUser();
+  if (clientFullNameEl) clientFullNameEl.value = user.fullName || "";
+  if (clientDocEl)      clientDocEl.value      = maskCpfCnpj(user.docDigits);
+  if (addrNeighborhoodEl) addrNeighborhoodEl.value = user.addrNeighborhood || "";
+  if (addrStreetEl)       addrStreetEl.value       = user.addrStreet || "";
+  if (addrNumberEl)       addrNumberEl.value       = user.addrNumber || "";
+  if (receiverNameEl)     receiverNameEl.value     = user.receiverName || "";
+  if (preferTimeChk)      preferTimeChk.checked    = !!user.preferTimeEnabled;
+  if (preferTimeInput) {
+    preferTimeInput.style.display = user.preferTimeEnabled ? "" : "none";
+    preferTimeInput.value = user.preferTime || "";
+  }
+  if (buyerNotesEl) buyerNotesEl.value = user.notes || "";
+
+  // Salva conforme digita
+  const saveText = (key, el) => saveUser({ [key]: (el.value || "").trim() });
+  clientFullNameEl?.addEventListener("input", () => saveText("fullName", clientFullNameEl));
+  clientDocEl?.addEventListener("input", () => {
+    const digits = (clientDocEl.value || "").replace(/\D/g, "").slice(0,14);
+    clientDocEl.value = maskCpfCnpj(digits);
+    saveUser({ docDigits: digits });
+  });
+
+  addrNeighborhoodEl?.addEventListener("input", () => saveText("addrNeighborhood", addrNeighborhoodEl));
+  addrStreetEl?.addEventListener("input",       () => saveText("addrStreet", addrStreetEl));
+  addrNumberEl?.addEventListener("input",       () => saveText("addrNumber", addrNumberEl));
+  receiverNameEl?.addEventListener("input",     () => saveText("receiverName", receiverNameEl));
+
+  preferTimeChk?.addEventListener("change", () => {
+    const enabled = !!preferTimeChk.checked;
+    preferTimeInput.style.display = enabled ? "" : "none";
+    if (!enabled) preferTimeInput.value = "";
+    saveUser({ preferTimeEnabled: enabled, preferTime: enabled ? preferTimeInput.value : "" });
+  });
+  preferTimeInput?.addEventListener("change", () => {
+    saveUser({ preferTimeEnabled: !!preferTimeChk.checked, preferTime: preferTimeInput.value });
+  });
+
+  buyerNotesEl?.addEventListener("input", () => saveText("notes", buyerNotesEl));
+
+  // ===== Variant modal =====
   let currentProduct = null;
   let currentVariants = [];
   let currentVariant = null;
@@ -87,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentProduct  = product;
     currentVariants = (product.variants && product.variants.length)
       ? product.variants
-      : [{ id:'default', label:'Padrão', unit:'unid', price:0 }];
+      : [{ id:'default', label:'Padrão', unit:'unid' }];
 
     modalTitle.textContent = product.name;
     modalImg.src = product.image || '';
@@ -145,7 +220,6 @@ document.addEventListener("DOMContentLoaded", () => {
       unit: currentVariant.unit,
       multiplier: currentVariant.multiplier || 1
     };
-    // merge se mesmo produto + mesma variação
     const idx = cart.findIndex(x => x.id===item.id && x.variantId===item.variantId);
     if (idx>=0) cart[idx].qty = +(cart[idx].qty + item.qty).toFixed(2);
     else cart.push(item);
@@ -155,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     closeVariants();
   });
 
-  // ===== CATÁLOGO =====
+  // ===== Catálogo =====
   function renderCatalog(){
     const q = (searchInput.value || "").toLowerCase();
     const cat = categoryFilter.value;
@@ -195,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ===== CARRINHO =====
+  // ===== Carrinho =====
   function updateCartUI(){
     const itemsCount = cart.reduce((s,x)=>s+x.qty,0);
     cartCount.textContent = itemsCount.toFixed(1);
@@ -206,7 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <p>Seu carrinho está vazio.</p>
       </div>`;
       totalQtyEl.textContent = "0";
-      totalPriceEl.textContent = "0,00";
+      totalPriceEl && (totalPriceEl.textContent = "0,00");
       return;
     }
 
@@ -267,64 +341,67 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   cartDrawer.addEventListener("click",(e)=>{ if(e.target===cartDrawer) closeCart(); });
 
-  // ===== ENVIO WHATSAPP (sem preços) =====
+  // ===== WhatsApp =====
   function buildWhatsappMessage(){
-    const notes = buyerNotesEl.value.trim();
+    const u = loadUser();
 
     let text = `*PEDIDO CEASA*%0A`;
-    text += `*TIPO:* FIDELIZADO%0A`;
-    text += `Cliente: ${encodeURIComponent(clientFullName)}%0A`;
-    text += `Documento: ${encodeURIComponent(clientDoc)}%0A`;
+    text += `Cliente: ${encodeURIComponent((u.fullName||"").trim())}%0A`;
+    text += `Documento: ${encodeURIComponent((u.docDigits||"").trim())}%0A`;
 
-    const bairro = (addrNeighborhood.value || "").trim();
-    const rua    = (addrStreet.value || "").trim();
-    const numero = (addrNumber.value || "").trim();
-    const recebedor = (receiverName.value || "").trim();
+    const bairro = (u.addrNeighborhood || "").trim();
+    const rua    = (u.addrStreet || "").trim();
+    const numero = (u.addrNumber || "").trim();
+    const recebedor = (u.receiverName || "").trim();
+
     if (bairro && rua && numero && recebedor) {
-      text += `%0A*Entrega*:%0A`;
-      text += `Bairro: ${encodeURIComponent(bairro)}%0A`+
-              `Rua: ${encodeURIComponent(rua)}%0A`+
-              `Número: ${encodeURIComponent(numero)}%0A`+
-              `Recebedor: ${encodeURIComponent(recebedor)}%0A`;
+      text += `%0A*Endereço de ENTREGA*:%0A`;
+      text += `Bairro: ${encodeURIComponent(bairro)}%0A`;
+      text += `Rua: ${encodeURIComponent(rua)}%0A`;
+      text += `Número: ${encodeURIComponent(numero)}%0A`;
+      text += `Recebedor: ${encodeURIComponent(recebedor)}%0A`;
     }
-    if (preferTimeChk.checked && preferTimeInput.value) {
-      text += `%0A*Preferência de horário:* ${encodeURIComponent(preferTimeInput.value)}%0A`;
+
+    if (u.preferTimeEnabled && u.preferTime) {
+      text += `%0A*Preferência de horário:* ${encodeURIComponent(u.preferTime)}%0A`;
     }
 
     text += `%0A*Itens:*%0A`;
     cart.forEach((x, idx) => {
-      text += `${idx+1}. ${encodeURIComponent(x.name)} — ${encodeURIComponent(x.variantLabel)} — ${x.qty.toFixed(1)} ${encodeURIComponent(x.unit)}%0A`;
+      text += `${idx+1}. ${encodeURIComponent(x.name)} — ${x.qty.toFixed(1)} ${encodeURIComponent(x.unit)}%0A`;
     });
 
-    if (notes){ text += `%0A*Observações:* ${encodeURIComponent(notes)}%0A`; }
+    if ((u.notes || "").trim()){
+      text += `%0A*Observações:* ${encodeURIComponent(u.notes.trim())}%0A`;
+    }
+
     text += `%0A*Origem:* Catálogo CEASA (web)`;
     return text;
   }
 
-  function validateClientForm(){
-    const name = (clientFullNameEl.value||"").trim();
-    const raw  = (clientDocEl.value||"").replace(/\D/g,"");
-    if(!name || !raw) return false;
-    if(!addrNeighborhood.value.trim() || !addrStreet.value.trim() || !addrNumber.value.trim() || !receiverName.value.trim()) return false;
-    clientFullName = name;
-    clientDoc = raw;
-    return true;
-  }
-
   function checkout(){
-    if(!validateClientForm()){
-      showToast("Preencha os dados obrigatórios do cliente e endereço.");
+    const u = loadUser();
+
+    if (!cart.length){
+      showToast("Seu carrinho está vazio");
       return;
     }
-    if(!cart.length){
-      showToast("Seu carrinho está vazio.");
+    if (!(u.fullName || "").trim() || !(u.docDigits || "").trim()) {
+      showToast("Preencha nome e CPF/CNPJ");
+      if (!u.fullName && clientFullNameEl) clientFullNameEl.focus();
+      else if (!u.docDigits && clientDocEl) clientDocEl.focus();
       return;
     }
+    if (!(u.addrNeighborhood||"").trim() || !(u.addrStreet||"").trim() || !(u.addrNumber||"").trim() || !(u.receiverName||"").trim()){
+      showToast("Preencha o endereço de ENTREGA (bairro, rua, número e recebedor)");
+      return;
+    }
+
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${buildWhatsappMessage()}`;
     window.open(url, "_blank");
   }
 
-  // eventos
+  // ===== Eventos globais =====
   searchInput.addEventListener("input", renderCatalog);
   categoryFilter.addEventListener("change", renderCatalog);
   openCartBtn.addEventListener("click", openCart);
@@ -340,3 +417,4 @@ document.addEventListener("DOMContentLoaded", () => {
   renderCatalog();
   updateCartUI();
 });
+

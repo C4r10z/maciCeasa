@@ -94,3 +94,16 @@ html,body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-sy
   .hero-card{grid-template-columns:1fr}
   .client-form .row{grid-template-columns:1fr}
 }
+#buyerNotes {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  min-height: 80px;
+}
+#buyerNotes:focus {
+  outline: none;
+  border-color: #16a34a; /* verde */
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}

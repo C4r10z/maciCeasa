@@ -60,6 +60,10 @@
             <input id="clientDoc" type="text" inputmode="numeric" required placeholder="somente números">
           </div>
         </div>
+        <div class="buyer-info" id="deliveryForm">
+        <small class="hint" style="margin-bottom:6px;display:block">
+          Este é o <strong>endereço de ENTREGA</strong> (pode ser diferente do endereço da empresa).
+        </small>
         <div class="row">
           <div class="col">
             <label>Bairro*</label>
@@ -84,8 +88,8 @@
             <input id="preferTimeInput" type="time" style="display:none;">
           </div>
         </div>
-        <label>Observações</label>
-        <textarea id="buyerNotes" rows="2" placeholder="Ponto de referência, bloco/apto, acesso ao local..."></textarea>
+        <label for="buyerNotes">Observações</label>
+        <textarea id="buyerNotes" rows="4" placeholder="Ex: Deixar na portaria, trocar alface por rúcula..." style="width:100%;resize:vertical"></textarea>
       </form>
     </div>
   </section>
