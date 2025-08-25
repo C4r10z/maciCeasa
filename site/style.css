@@ -440,3 +440,12 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
 
 /* ===== seção client separada do hero ===== */
 .client .container{ margin-top: 12px; }
+/* Ícones do hero com o MESMO degradê do telefone (laranja → verde) */
+.hero-points i.fa-seedling,
+.hero-points i.fa-road{
+  background-image: linear-gradient(90deg, var(--duo-1), var(--duo-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent; /* Safari/iOS */
+}
