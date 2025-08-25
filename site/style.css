@@ -526,3 +526,139 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
 @media (max-width:768px){
   :root{ --field-h: 48px; }
 }
+#cartCount{ display:inline-block; min-width:1.2em; text-align:center }
+@keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.25)}60%{transform:scale(.95)}100%{transform:scale(1)}}
+#cartCount.bump{ animation: bump .45s var(--ease) }
+@keyframes float1{ 0%{transform:translate(0,0)} 50%{transform:translate(10px,8px)} 100%{transform:translate(0,0)} }
+@keyframes float2{ 0%{transform:translate(0,0)} 50%{transform:translate(-10px,6px)} 100%{transform:translate(0,0)} }
+.hero::before{ animation: float1 12s ease-in-out infinite; }
+.hero::after{  animation: float2 14s ease-in-out infinite; }
+@keyframes gradShift{ 0%{background-position:0% 50%} 100%{background-position:100% 50%} }
+.header::after{
+  background: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
+  background-size: 200% 100%;
+  animation: gradShift 10s linear infinite;
+  opacity:.9;
+}
+.btn.primary{ position:relative; overflow:hidden; }
+.btn.primary .ripple{
+  position:absolute; border-radius:50%; transform:translate(-50%,-50%) scale(0);
+  background: rgba(255,255,255,.6); pointer-events:none; width:10px; height:10px; opacity:.8;
+  animation: ripple .6s ease-out forwards;
+}
+@keyframes ripple{ to{ transform:translate(-50%,-50%) scale(35); opacity:0 } }
+/* =============== Duo-tone helpers (laranja + verde, suaves) =============== */
+:root{
+  --duo-1: var(--accent-orange);
+  --duo-2: var(--accent-green);
+}
+
+/* Gradiente “duo” pronto pra reutilizar */
+.duo-grad{ background-image: linear-gradient(90deg, var(--duo-1), var(--duo-2)); }
+
+/* Header: filete animado usando as duas cores (sem pesar) */
+@keyframes gradShift { 0%{background-position:0% 50%} 100%{background-position:100% 50%} }
+.header::after{
+  background: linear-gradient(90deg, var(--duo-1), var(--duo-2), var(--duo-1));
+  background-size: 200% 100%;
+  animation: gradShift 12s linear infinite;
+  opacity:.9;
+}
+
+/* Hero: marca-texto do <strong> com blend das duas cores */
+.hero-text h2 strong{
+  box-shadow: none;
+  background: linear-gradient(90deg, rgba(225,107,52,.28), rgba(103,180,58,.28));
+  border-radius: 6px;
+  padding: 0 .18em;
+}
+
+/* Cards: faixa do topo usando duo-tone; hover com anel alternado */
+.card::before{
+  background: linear-gradient(90deg, var(--duo-1), var(--duo-2));
+  opacity:.95;
+}
+/* alterna o “anel” do hover entre verde e laranja para dar variedade */
+.grid .card:hover{
+  box-shadow:
+    0 14px 28px rgba(0,0,0,.12),
+    0 0 0 1px rgba(225,107,52,.15),
+    0 0 0 6px rgba(103,180,58,.08);
+}
+.grid .card:nth-child(even):hover{
+  box-shadow:
+    0 14px 28px rgba(0,0,0,.12),
+    0 0 0 1px rgba(103,180,58,.15),
+    0 0 0 6px rgba(225,107,52,.08);
+}
+
+/* Badges: alterna suavemente entre laranja e verde */
+.badge{ background: linear-gradient(180deg, var(--accent-green), var(--accent-green-2)); }
+.grid .card:nth-child(even) .badge{
+  background: linear-gradient(180deg, var(--accent-orange), var(--accent-orange-2));
+}
+
+/* Divisor decorativo (hint) em duo-tone */
+.container .hint::before{
+  background: linear-gradient(90deg, var(--duo-1), var(--duo-2), var(--duo-1));
+  opacity:.65;
+}
+
+/* ================== INPUTS NEUTROS (sem cor-tinta) ================== */
+/* Fundo branco, borda cinza, foco neutro acessível (sem laranja/verde) */
+.client-form input,
+.client-form textarea,
+.header input,
+.header select,
+#variantQty{
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+  color: var(--text);
+}
+
+/* Foco neutro (cinza/azulado) para acessibilidade sem “pintar” de cor */
+.client-form input:focus,
+.client-form textarea:focus,
+.header input:focus,
+.header select:focus,
+#variantQty:focus{
+  border-color: #94a3b8 !important;             /* slate-400 */
+  box-shadow: 0 0 0 2px rgba(148,163,184,.25) !important;
+  outline: none;
+}
+
+/* Labels flutuantes e ícones dos campos também neutros */
+.client-form .col label{
+  background:#fff;
+  color:#6b7280; /* slate-500 */
+}
+.client-form .col::before{ color:#94a3b8; opacity:.9; }
+
+/* Setinha do <select> neutra (sem laranja/verde) */
+.header select{
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%), /* slate-500 */
+    linear-gradient(135deg, #6b7280 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) calc(50% + 2px),
+    calc(100% - 12px) calc(50% + 2px),
+    100% 0;
+  background-size: 6px 6px, 6px 6px, 2.2em 2.2em;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+/* ================== DETALHES QUE MISTURAM AS DUAS CORES ================== */
+/* Botão outline fica verde; primary já é laranja → duo natural no conjunto */
+.btn.outline{ border-color: var(--accent-green); color: var(--accent-green); }
+.btn.primary{ background: linear-gradient(180deg, var(--accent-orange), var(--accent-orange-2)); }
+
+/* Hero list icons puxando levemente p/ as duas cores, sem exagero */
+.hero-points i{
+  background: linear-gradient(90deg, var(--duo-1), var(--duo-2));
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+}

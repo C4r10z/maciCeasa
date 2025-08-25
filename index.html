@@ -260,6 +260,33 @@
   </script>
 
   <script>
+  (() => {
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn.primary'); if(!btn) return;
+      const r = btn.getBoundingClientRect();
+      const span = document.createElement('span');
+      span.className = 'ripple';
+      span.style.left = (e.clientX - r.left) + 'px';
+      span.style.top  = (e.clientY - r.top)  + 'px';
+      btn.appendChild(span);
+      span.addEventListener('animationend', () => span.remove());
+    }, {passive:true});
+  })();
+  </script>
+
+  <script>
+  (() => {
+    const el = document.getElementById('cartCount');
+    if (!el) return;
+    const obs = new MutationObserver(() => {
+      el.classList.remove('bump'); void el.offsetWidth; // restart anim
+      el.classList.add('bump');
+    });
+    obs.observe(el, {childList:true, characterData:true, subtree:true});
+  })();
+  </script>
+
+  <script>
   (function(){
     const fields = document.querySelectorAll('#clientDataForm input, #clientDataForm textarea');
     fields.forEach(el=>{
