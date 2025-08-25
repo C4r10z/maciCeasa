@@ -662,3 +662,84 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
   -webkit-background-clip: text; background-clip: text;
   color: transparent;
 }
+/* ===== iOS/Safari compat: tipografia e scroll ===== */
+html { -webkit-text-size-adjust: 100%; }                  /* evita zoom/auto-ajuste de fonte */
+.cart-items { -webkit-overflow-scrolling: touch; }        /* rolagem suave no drawer */
+
+/* ===== Backdrop blur: prefixos + fallback elegante ===== */
+.header{
+  background-color: rgba(255,255,255,.72);                /* precisa de cor translúcida p/ blur funcionar */
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+}
+.modal-backdrop{
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .header{ background-color: rgba(255,255,255,.96); }     /* degrada para sólido */
+  .modal-backdrop{ background: rgba(0,0,0,.55); }         /* mantém contraste no overlay */
+}
+
+/* ===== Header fixo + notch (safe area) ===== */
+@supports (padding: max(0px)) {
+  .header{ padding-top: env(safe-area-inset-top); }       /* espaço p/ notch do iPhone */
+}
+
+/* ===== Blur do MAIN quando modal/drawer abrem: evita flicker no Safari ===== */
+main{
+  will-change: filter;
+  transform: translateZ(0);                                /* cria contexto e estabiliza o filtro */
+}
+
+/* ===== Hero blobs: prefixo no filter para engines antigas ===== */
+.hero::before, .hero::after{ -webkit-filter: blur(40px); }
+
+/* ===== Select: seta custom + normalização no Safari ===== */
+.header select{
+  -webkit-appearance: none; appearance: none;              /* remove estilo nativo do iOS */
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%),
+    linear-gradient(135deg, #6b7280 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) calc(50% + 2px),
+    calc(100% - 12px) calc(50% + 2px),
+    100% 0;
+  background-size: 6px 6px, 6px 6px, 2.2em 2.2em;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+/* ===== Labels flutuantes sem :has() (iOS antigo): use classes .is-focus/.has-value ===== */
+/* Já mantém inputs NEUTROS (sem cor) como você pediu */
+.client-form .col{ position: relative; padding-top: 22px; }
+.client-form .col label{
+  position:absolute; left: 36px; top: 8px;                 /* 36px = espaço do ícone à esquerda */
+  font-size: 13px; color:#6b7280;                          /* neutro */
+  background:#fff; padding:0 6px; border-radius:6px;
+  transform-origin: left top;
+  transition: transform .25s var(--ease), color .25s var(--ease), opacity .25s var(--ease);
+  pointer-events:none; z-index:2;
+}
+.client-form input, .client-form textarea{ padding-left: 36px; } /* espaço p/ ícone */
+
+.client-form .col.is-focus label,
+.client-form .col.has-value label{
+  transform: translateY(-14px) scale(.92);
+  color: #475569;                                          /* slate-600, legível */
+}
+
+/* Ícones dos campos alinhados no iOS */
+.client-form .col::before{
+  position:absolute; left:12px;
+  top: calc(22px + 22px);                                  /* 22 label-pad + ~metade do input */
+  transform: translateY(-50%);
+  font-family:"Font Awesome 6 Free"; font-weight:900;
+  font-size: 16px; line-height:1; color:#94a3b8; opacity:.9;
+  pointer-events:none; z-index:1;
+}
+
+/* ===== Botões/form normalizados no iOS ===== */
+button, input, select, textarea { -webkit-appearance: none; border-radius: 12px; }
+input[type="time"]{ -webkit-appearance: none; }            /* evita picker deformar o input */

@@ -260,6 +260,24 @@
   </script>
 
   <script>
+  (function(){
+    // Labels flutuantes robustas no iOS (sem :has)
+    const cols = document.querySelectorAll('.client-form .col');
+    cols.forEach(col=>{
+      const el = col.querySelector('input, textarea');
+      if(!el) return;
+      // placeholder " " ajuda compat em alguns browsers
+      if (!el.hasAttribute('placeholder')) el.setAttribute('placeholder', ' ');
+      const sync = () => col.classList.toggle('has-value', (el.value||'').trim().length>0);
+      el.addEventListener('focus', ()=> col.classList.add('is-focus'));
+      el.addEventListener('blur',  ()=> col.classList.remove('is-focus'));
+      el.addEventListener('input', sync);
+      sync();
+    });
+  })();
+  </script>
+
+  <script>
   (() => {
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('.btn.primary'); if(!btn) return;
