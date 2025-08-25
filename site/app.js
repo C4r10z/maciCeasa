@@ -251,6 +251,113 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  (() => {
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  const body = document.body;
+  const modal = $('#variantModal');
+  const modalCard = modal ? $('.variant-card', modal) : null;
+  const drawer = $('#cartDrawer');
+
+  let lastOpener = null; // quem abriu (para devolver o foco)
+
+  // —— Helpers de foco simples
+  function trapFocus(container, e){
+    const focusables = $$('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])', container)
+      .filter(el => !el.hasAttribute('disabled') && el.tabIndex !== -1);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+
+  // —— Popup do item
+  function openVariant(opener){
+    lastOpener = opener || document.activeElement;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden','false');
+    body.classList.add('modal-open');
+    // foca dentro
+    setTimeout(()=> { if (modalCard) modalCard.focus(); }, 0);
+    document.addEventListener('keydown', onModalKey);
+  }
+  function closeVariant(){
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden','true');
+    body.classList.remove('modal-open');
+    document.removeEventListener('keydown', onModalKey);
+    if (lastOpener) lastOpener.focus();
+  }
+  function onModalKey(e){
+    if (e.key === 'Escape') closeVariant();
+    if (e.key === 'Tab') { trapFocus(modal, e); }
+  }
+  if (modal){
+    modal.addEventListener('click', (e)=>{
+      if (e.target === modal) closeVariant(); // clique fora
+    });
+    $$( '[data-open-variant]' ).forEach(btn=>{
+      btn.addEventListener('click', ()=> openVariant(btn));
+    });
+    $$( '[data-close-variant]' ).forEach(btn=>{
+      btn.addEventListener('click', closeVariant);
+    });
+  }
+
+  // —— Drawer do carrinho
+  function openCart(opener){
+    lastOpener = opener || document.activeElement;
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden','false');
+    body.classList.add('drawer-open');
+    document.addEventListener('keydown', onDrawerKey);
+    // foco no primeiro interativo do drawer:
+    setTimeout(()=>{
+      const focusable = drawer.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      focusable && focusable.focus();
+    }, 0);
+  }
+  function closeCart(){
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden','true');
+    body.classList.remove('drawer-open');
+    document.removeEventListener('keydown', onDrawerKey);
+    if (lastOpener) lastOpener.focus();
+  }
+  function onDrawerKey(e){
+    if (e.key === 'Escape') closeCart();
+    if (e.key === 'Tab') { trapFocus(drawer, e); }
+  }
+  if (drawer){
+    $$( '[data-open-cart]' ).forEach(btn=>{
+      btn.addEventListener('click', ()=> openCart(btn));
+    });
+    $$( '[data-close-cart]' ).forEach(btn=>{
+      btn.addEventListener('click', closeCart);
+    });
+    // fecha clicando no backdrop escuro
+    drawer.addEventListener('click', (e)=>{
+      if (e.target === drawer) closeCart();
+    });
+  }
+})();
+
+  
+  // Controles de quantidade no modal
+  (function(){
+    const input = document.getElementById('variantQty');
+    const btnMinus = document.getElementById('qtyMinus');
+    const btnPlus = document.getElementById('qtyPlus');
+
+    function getVal(){ return parseInt(input.value, 10) || 1; }
+    function setVal(v){ input.value = Math.max(1, v); }
+
+    btnMinus && btnMinus.addEventListener('click', ()=> setVal(getVal()-1));
+    btnPlus  && btnPlus.addEventListener('click', ()=> setVal(getVal()+1));
+  })();
+
   catalogEl?.addEventListener("click", (e)=>{
     const card = e.target.closest(".card");
     if(!card) return;

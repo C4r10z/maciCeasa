@@ -46,7 +46,7 @@
             <li><i class="fas fa-phone"></i> (32) 3331-9687 • 9983-1534 • 9983-2505</li>
           </ul>
         </div>
-        <img class="hero-photo" src="site/assets/fachada.jpg" alt="Comercial Celeiro">
+        <img class="hero-photo" src="site/assets/celeiro.jpg" alt="Comercial Celeiro">
       </div>
 
       <form id="clientDataForm" class="client-form" novalidate>
@@ -83,12 +83,11 @@
             <label>Nome de quem irá receber*</label>
             <input id="receiverName" type="text" required>
           </div>
-<label style="display:flex; gap:8px; align-items:center; user-select:none; margin-top:4px;">
-  <input id="preferTimeChk" type="checkbox" />
-  <span>Tenho preferência por horário</span>
-</label>
-<input id="preferTimeInput" type="time" style="display:none;" />
-
+          <label style="display:flex; gap:8px; align-items:center; user-select:none; margin-top:4px;">
+            <input id="preferTimeChk" type="checkbox" />
+            <span>Tenho preferência por horário</span>
+          </label>
+          <input id="preferTimeInput" type="time" style="display:none;" />
         </div>
         <label for="buyerNotes">Observações</label>
         <textarea id="buyerNotes" rows="4" placeholder="Ex: Deixar na portaria, trocar alface por rúcula..." style="width:100%;resize:vertical"></textarea>
@@ -103,7 +102,7 @@
 
   <!-- Drawer do carrinho -->
   <div id="cartDrawer" class="drawer" aria-hidden="true">
-    <div class="drawer-content">
+    <div class="drawer-content" role="dialog" aria-label="Carrinho">
       <div class="drawer-header">
         <h2><i class="fas fa-shopping-basket"></i> Carrinho</h2>
         <button id="closeCartBtn" class="icon-btn" aria-label="Fechar">
@@ -137,28 +136,259 @@
   <div id="toast" class="toast"><i class="fas fa-check-circle"></i><span></span></div>
 
   <!-- Variant Modal -->
-  <div id="variantModal" class="modal-backdrop" aria-hidden="true">
-    <div class="variant-card">
+  <div id="variantModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="variantTitle">
+    <div class="variant-card" role="document" tabindex="-1">
       <div class="variant-head">
         <h3 id="variantTitle">Produto</h3>
-        <button id="variantClose" class="icon-btn"><i class="fas fa-times"></i></button>
+        <button id="variantClose" class="icon-btn" aria-label="Fechar opções"><i class="fas fa-times"></i></button>
       </div>
       <img id="variantImage" alt="" class="variant-img">
       <p id="variantDesc" class="muted"></p>
 
       <div id="variantOptions" class="variant-options"></div>
 
-      <div class="variant-qty">
-        <label>Quantidade</label>
-        <input id="variantQty" type="text" inputmode="decimal" value="1">
-        <small id="variantUnitHint" class="muted"></small>
-      </div>
+    <div class="variant-qty">
+      <label for="variantQty">Quantidade</label>
+      <button type="button" class="qty-btn" id="qtyMinus">−</button>
+      <input id="variantQty" type="text" inputmode="decimal" value="1">
+      <button type="button" class="qty-btn" id="qtyPlus">+</button>
+      <small id="variantUnitHint" class="muted"></small>
+    </div>
 
       <button id="variantAddBtn" class="btn primary"><i class="fas fa-plus"></i> Adicionar ao carrinho</button>
     </div>
   </div>
 
+  <!-- scripts originais, sem defer -->
   <script src="site/product.js"></script>
   <script src="site/app.js"></script>
+
+  <script>
+  /* Reveal com stagger, incluindo itens adicionados dinamicamente ao #catalog */
+  (function(){
+    const EASE = 'cubic-bezier(.2,.7,.2,1)';
+    const BASE_DELAY = 0.12; // atraso inicial do lote
+    const STEP = 0.10;       // espaçamento entre itens no lote
+
+    // Garante classe .reveal e prepara transições
+    function prep(el){
+      if (!el || el.classList.contains('reveal')) return;
+      el.classList.add('reveal');
+      el.style.transition = `opacity .6s ${EASE}, transform .6s ${EASE}`;
+    }
+
+    // Observador de interseção com stagger por lote
+    const io = new IntersectionObserver((entries)=>{
+      // agrupa por pai para aplicar stagger consistente por lote
+      const groups = new Map();
+      entries.forEach(en=>{
+        if (!en.isIntersecting) return;
+        const parent = en.target.parentElement || document.body;
+        if (!groups.has(parent)) groups.set(parent, []);
+        groups.get(parent).push(en.target);
+      });
+
+      groups.forEach((items)=>{
+        // ordena pelo índice visual (top/left)
+        items.sort((a,b)=> a.getBoundingClientRect().top - b.getBoundingClientRect().top
+                        || a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+        items.forEach((el, i)=>{
+          el.style.transitionDelay = (BASE_DELAY + i*STEP) + 's';
+          el.classList.add('is-visible');
+          io.unobserve(el);
+        });
+      });
+    }, { threshold: 0.35, rootMargin: '10% 0px -5%' });
+
+    // Prepara e observa elementos estáticos
+    const hero = document.querySelector('.hero-card');
+    const form = document.querySelector('#clientDataForm');
+    [hero, form].forEach(el=>{
+      if (el){
+        prep(el);
+        io.observe(el);
+      }
+    });
+
+    // Lida com o catálogo dinâmico
+    const catalog = document.getElementById('catalog');
+    if (catalog){
+      // já existentes (se o app renderizou antes)
+      catalog.querySelectorAll('.card').forEach(card=>{
+        prep(card); io.observe(card);
+      });
+
+      // observa novos nós adicionados ao catálogo
+      const mo = new MutationObserver((muts)=>{
+        // coleta os .card recém-inseridos
+        const added = [];
+        muts.forEach(m=>{
+          m.addedNodes.forEach(node=>{
+            if (!(node instanceof HTMLElement)) return;
+            if (node.classList && node.classList.contains('card')) {
+              added.push(node);
+            } else {
+              // se veio um fragmento, procura .card dentro
+              node.querySelectorAll && node.querySelectorAll('.card').forEach(c=>added.push(c));
+            }
+          });
+        });
+        // aplica preparo e observa os novos, com reset de delay
+        added.forEach((card, i)=>{
+          prep(card);
+          // sem delay fixo aqui; o IO define o delay por lote ao entrar na viewport
+          card.style.transitionDelay = '';
+          io.observe(card);
+        });
+      });
+      mo.observe(catalog, { childList:true, subtree:true });
+    }
+
+    // Fallback simples: se o navegador não suportar IO/MutationObserver
+    if (!('IntersectionObserver' in window) || !('MutationObserver' in window)) {
+      [hero, form].forEach(el=> el && el.classList.add('is-visible'));
+      if (catalog){
+        catalog.addEventListener('DOMNodeInserted', (e)=>{
+          const el = e.target;
+          if (el instanceof HTMLElement && el.classList.contains('card')) {
+            el.classList.add('is-visible');
+          }
+        });
+      }
+    }
+  })();
+  </script>
+
+  <script>
+  (function(){
+    const fields = document.querySelectorAll('#clientDataForm input, #clientDataForm textarea');
+    fields.forEach(el=>{
+      // garante placeholder para habilitar estados como :placeholder-shown (se quiser usar no futuro)
+      if (!el.hasAttribute('placeholder')) el.setAttribute('placeholder',' ');
+      const col = el.closest('.col');
+      if (!col) return;
+      const sync = () => col.classList.toggle('has-value', (el.value||'').trim().length>0);
+      el.addEventListener('input', sync);
+      el.addEventListener('blur', sync);
+      sync();
+    });
+  })();
+  </script>
+
+  <script>
+  (function(){
+    const header = document.querySelector('.header');
+    if (!header) return;
+
+    // Calcula a altura real do header e aplica no body como --header-h
+    function syncHeaderSpace(){
+      const h = header.offsetHeight;
+      document.documentElement.style.setProperty('--header-h', h + 'px');
+    }
+
+    // Encolhe/expande ao rolar
+    function onScroll(){
+      const y = window.scrollY || document.documentElement.scrollTop;
+      if (y > 50) header.classList.add('shrink');
+      else header.classList.remove('shrink');
+      // altura muda quando shrink toggla → ressincroniza
+      syncHeaderSpace();
+    }
+
+    // Primeira medição ao iniciar
+    window.addEventListener('load', syncHeaderSpace);
+    // Recalcula em resize/orientação
+    window.addEventListener('resize', syncHeaderSpace);
+    window.addEventListener('orientationchange', syncHeaderSpace);
+
+    // Scroll listener
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    // Também sincroniza depois de um microdelay (fonts/ícones podem mudar a altura)
+    setTimeout(syncHeaderSpace, 100);
+  })();
+  </script>
+
+  <script>
+  // Bloqueia "double-tap zoom" só em elementos que NÃO são campos de entrada
+  (function(){
+    let lastTouch = 0;
+    const isFormField = (el) => {
+      return el.closest('input, textarea, select, [contenteditable="true"]');
+    };
+
+    document.addEventListener('touchend', function(e){
+      // se tocou num campo de formulário, não bloqueia
+      if (isFormField(e.target)) return;
+
+      const now = Date.now();
+      if (now - lastTouch <= 300) {
+        e.preventDefault();   // cancela o segundo toque
+      }
+      lastTouch = now;
+    }, { passive: false });
+  })();
+  </script>
+
+  <!-- patch mínimo: blur/foco sem mexer na lógica do seu app -->
+  <script>
+    (function(){
+      const body = document.body;
+
+      // ——— Drawer (carrinho)
+      const drawer = document.getElementById('cartDrawer');
+      const openCartBtn = document.getElementById('openCartBtn');
+      const closeCartBtn = document.getElementById('closeCartBtn');
+
+      function openCart(){
+        if (!drawer) return;
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden','false');
+        body.classList.add('drawer-open'); // aplica blur no <main> via CSS que já te passei
+      }
+      function closeCart(){
+        if (!drawer) return;
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden','true');
+        body.classList.remove('drawer-open');
+      }
+      openCartBtn && openCartBtn.addEventListener('click', openCart);
+      closeCartBtn && closeCartBtn.addEventListener('click', closeCart);
+      drawer && drawer.addEventListener('click', e=>{ if (e.target === drawer) closeCart(); });
+
+      // ——— Modal (variações)
+      const modal = document.getElementById('variantModal');
+      const modalCard = modal ? modal.querySelector('.variant-card') : null;
+      const variantClose = document.getElementById('variantClose');
+
+      // Se o seu app.js já controla abrir/fechar adicionando/removendo "open",
+      // este código só aplica o blur e acessibilidade:
+      const observer = new MutationObserver(() => {
+        if (!modal) return;
+        const isOpen = modal.classList.contains('open');
+        modal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        body.classList.toggle('modal-open', isOpen);
+        if (isOpen && modalCard) modalCard.focus();
+      });
+      modal && observer.observe(modal, { attributes:true, attributeFilter:['class'] });
+
+      // Fechar pelo X e clique fora (não interfere se seu app.js já fazia)
+      function closeVariant(){
+        if (!modal) return;
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden','true');
+        body.classList.remove('modal-open');
+      }
+      variantClose && variantClose.addEventListener('click', closeVariant);
+      modal && modal.addEventListener('click', e=>{ if (e.target === modal) closeVariant(); });
+
+      // ESC fecha o que estiver aberto
+      document.addEventListener('keydown', (e)=>{
+        if (e.key !== 'Escape') return;
+        if (modal && modal.classList.contains('open')) closeVariant();
+        if (drawer && drawer.classList.contains('open')) closeCart();
+      });
+    })();
+  </script>
 </body>
 </html>

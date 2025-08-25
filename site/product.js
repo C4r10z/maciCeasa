@@ -24,14 +24,14 @@ const V = {
 
 // Catálogo (sem preços visíveis – price aqui é irrelevante)
 window.PRODUCTS = [
-  { id:1,  name:"Tomate",          category:"Legumes",  unit:"kg",   image:"site/assets/lars-blankers-6Z7Ss9jlEL0-unsplash.jpg", variants:V.tomate },
-  { id:2,  name:"Cenoura",         category:"Legumes",  unit:"kg",   image:"site/assets/harshal-s-hirve-yNB8niq1qCk-unsplash.jpg", variants:V.comum },
-  { id:3,  name:"Batata Inglesa",  category:"Legumes",  unit:"kg",   image:"site/assets/lars-blankers-B0s3Xndk6tw-unsplash.jpg", variants:V.comum },
-  { id:4,  name:"Banana",          category:"Frutas",   unit:"kg",   image:"site/assets/engin-akyurt-kQIRZiMpV4o-unsplash.jpg", variants:V.comum },
-  { id:5,  name:"Maçã",            category:"Frutas",   unit:"kg",   image:"site/assets/matheus-cenali-wXuzS9xR49M-unsplash.jpg", variants:V.comum },
-  { id:6,  name:"Alface",          category:"Verduras", unit:"unid", image:"site/assets/engin-akyurt-6djmntSYfoE-unsplash.jpg", variants:V.unidade },
-  { id:7,  name:"Cheiro-Verde",    category:"Temperos", unit:"maço", image:"site/assets/beneficios-do-cheiro-verde.webp", variants:V.maco },
-  { id:8,  name:"Cebola",          category:"Legumes",  unit:"kg",   image:"site/assets/tom-hermans-2wsAcKw9_Qo-unsplash.jpg", variants:V.comum },
-  { id:9,  name:"Laranja",         category:"Frutas",   unit:"kg",   image:"site/assets/sheraz-shaikh-Zx3kcU2Kw9E-unsplash.jpg", variants:V.comum },
-  { id:10, name:"Abacaxi",         category:"Frutas",   unit:"unid", image:"site/assets/phoenix-han-ZS_RypKo9sk-unsplash.jpg", variants:V.unidade },
+  { id:1,  name:"Tomate",          category:"Frutas",  unit:"kg",   image:"site/assets/tomate.webp", variants:V.tomate },
+  { id:2,  name:"Cenoura",         category:"Legumes",  unit:"kg",   image:"site/assets/cenoura.webp", variants:V.comum },
+  { id:3,  name:"Batata Inglesa",  category:"Legumes",  unit:"kg",   image:"site/assets/batata-inglesa.webp", variants:V.comum },
+  { id:4,  name:"Banana",          category:"Frutas",   unit:"kg",   image:"site/assets/banana.webp", variants:V.comum },
+  { id:5,  name:"Maçã",            category:"Frutas",   unit:"kg",   image:"site/assets/maca.webp", variants:V.comum },
+  { id:6,  name:"Alface",          category:"Verduras", unit:"unid", image:"site/assets/alface.webp", variants:V.unidade },
+  { id:7,  name:"Cheiro-Verde",    category:"Temperos", unit:"maço", image:"site/assets/cheiro-verde.webp", variants:V.maco },
+  { id:8,  name:"Cebola",          category:"Legumes",  unit:"kg",   image:"site/assets/cebola.webp", variants:V.comum },
+  { id:9,  name:"Laranja",         category:"Frutas",   unit:"kg",   image:"site/assets/laranja.webp", variants:V.comum },
+  { id:10, name:"Abacaxi",         category:"Frutas",   unit:"unid", image:"site/assets/abacaxi.webp", variants:V.unidade },
 ];
