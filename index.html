@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="./site/style.css">
   <meta name="theme-color" content="#ffffff">
   <meta name="color-scheme" content="light">
+  <meta name="format-detection" content="telephone=no">
 </head>
 <body>
   <header class="header">
@@ -43,7 +44,12 @@
           <ul class="hero-points">
             <li><i class="fas fa-seedling"></i> Atacado CEASA • Barbacena/MG</li>
             <li><i class="fas fa-road"></i> BR 040 • KM 698 • CEASA</li>
-            <li><i class="fas fa-phone"></i> (32) 3331-9687 • 9983-1534 • 9983-2505</li>
+            <li class="phones">
+            <i class="fas fa-phone" aria-hidden="true"></i>
+            <a class="tel" href="tel:+553233319687">(32) 3331-9687</a>
+            <a class="tel" href="tel:+553299831534">9983-1534</a>
+            <a class="tel" href="tel:+553299832505">9983-2505</a>
+          </li>
           </ul>
         </div>
         <img class="hero-photo" src="site/assets/celeiro.jpg" alt="Comercial Celeiro">
@@ -162,6 +168,62 @@
   <!-- scripts originais, sem defer -->
   <script src="site/product.js"></script>
   <script src="site/app.js"></script>
+  
+  <script>
+  (function(){
+    // Encontra o <li> com ícone de telefone
+    const li = Array.from(document.querySelectorAll('.hero-points li'))
+      .find(li => li.querySelector('.fa-phone'));
+    if (!li) return;
+
+    li.classList.add('phones');
+
+    // Guarda o ícone e captura APENAS o texto ao redor, preservando a ordem
+    const icon = li.querySelector('.fa-phone');
+    const pieces = [];
+    li.childNodes.forEach(node=>{
+      if (node === icon || (node.nodeType===1 && node.contains(icon))) return; // ignora o ícone
+      pieces.push(node.textContent || '');
+    });
+    let raw = pieces.join(' ').replace(/\s+/g,' ').trim();
+    if (!raw) return;
+
+    // Extrai DDD inicial, ex: "(32)"
+    const dddMatch = raw.match(/\((\d{2})\)/);
+    const ddd = dddMatch ? dddMatch[1] : null;
+    if (ddd) raw = raw.replace(/\(\d{2}\)\s*/, ''); // remove "(32) " do início
+
+    // Divide pelos marcadores comuns (•, vírgula, ponto médio), mantendo a ordem
+    const parts = raw.split(/[•,·]/).map(s=>s.trim()).filter(Boolean);
+
+    // Monta chips preservando o texto como está, mas com href tel: em E.164
+    const chips = parts.map((txt, idx)=>{
+      const pretty = txt.replace(/-/g, '\u2011'); // hífen inquebrável na exibição
+      let digits = txt.replace(/\D/g,'');         // só dígitos para o link
+
+      // Se veio sem DDD (8 ou 9 dígitos), usa o DDD inicial
+      if (ddd && (digits.length===8 || digits.length===9)) {
+        digits = ddd + digits;
+      }
+      // Brasil: adiciona +55 se faltar
+      if (!/^55/.test(digits) && (digits.length===10 || digits.length===11)) {
+        digits = '55' + digits;
+      }
+      return { pretty, href: 'tel:+' + digits };
+    });
+
+    // Limpa o <li> e reconstrói: ícone (primeiro) + chips (na MESMA ordem)
+    li.innerHTML = '';
+    li.appendChild(icon);
+    chips.forEach(({pretty, href})=>{
+      const a = document.createElement('a');
+      a.className = 'tel';
+      a.href = href;
+      a.textContent = pretty;
+      li.appendChild(a);
+    });
+  })();
+  </script>
 
   <script>
   /* Reveal com stagger, incluindo itens adicionados dinamicamente ao #catalog */

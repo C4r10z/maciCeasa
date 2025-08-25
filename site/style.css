@@ -743,3 +743,68 @@ main{
 /* ===== Botões/form normalizados no iOS ===== */
 button, input, select, textarea { -webkit-appearance: none; border-radius: 12px; }
 input[type="time"]{ -webkit-appearance: none; }            /* evita picker deformar o input */
+/* Telefones: chips que não quebram e se organizam em linhas */
+.hero-points .phones{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+}
+.hero-points .phones > i{ margin-right: 2px; color: var(--accent-orange-2); }
+
+.hero-points .tel{
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  line-height: 1;
+  white-space: nowrap;   /* não quebra dentro do número */
+  word-break: keep-all;
+  hyphens: manual;
+  font-variant-numeric: tabular-nums; /* dígitos alinhados */
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.hero-points .tel:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+}
+
+/* Garante que o Safari não pinte links "tel:" em azul estranho */
+a[href^="tel:"]{ color: inherit; }
+/* Linha de telefones: chips responsivos e sem quebra interna */
+.hero-points .phones{
+  display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;
+}
+
+/* Ícone com degradê laranja→verde (compatível com Safari) */
+.hero-points .phones > i{
+  margin-right:4px;
+  background-image: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+
+/* Chips de telefone */
+.hero-points .tel{
+  display:inline-flex; align-items:center; line-height:1;
+  padding:6px 10px; border:1px solid var(--border); border-radius:999px;
+  background:#fff; color:inherit; text-decoration:none;
+  white-space:nowrap; word-break:keep-all; hyphens:manual;
+  font-variant-numeric: tabular-nums;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.hero-points .tel:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+}
+
+/* iOS: NÃO azul! Força herdar cor do texto nos links tel: */
+a[href^="tel:"]{
+  color: inherit !important;
+  text-decoration: none !important;
+  -webkit-text-fill-color: currentColor; /* Safari */
+}
