@@ -974,3 +974,5 @@ a[href^="tel:"]{
   text-decoration: none !important;
   -webkit-text-fill-color: currentColor;
 }
+/* espaçamento suave abaixo do hero quando o form sai do mesmo container */
+.client .container{ margin-top: 12px; }

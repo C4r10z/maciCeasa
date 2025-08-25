@@ -57,52 +57,56 @@
           </ul>
         </div>
       <img class="hero-mark" src="site/assets/celeiro-mark.svg" alt="" width="44" height="44">
-
-      <form id="clientDataForm" class="client-form" novalidate>
-        <div class="row">
-          <div class="col">
-            <label>Nome completo*</label>
-            <input id="clientFullName" type="text" required>
-          </div>
-          <div class="col">
-            <label>CPF ou CNPJ*</label>
-            <input id="clientDoc" type="text" inputmode="numeric" required placeholder="somente números">
-          </div>
-        </div>
-        <div class="buyer-info" id="deliveryForm">
-        <small class="hint" style="margin-bottom:6px;display:block">
-          Este é o <strong>endereço de ENTREGA</strong> (pode ser diferente do endereço da empresa).
-        </small>
-        <div class="row">
-          <div class="col">
-            <label>Bairro*</label>
-            <input id="addrNeighborhood" type="text" required>
-          </div>
-          <div class="col">
-            <label>Rua / Avenida*</label>
-            <input id="addrStreet" type="text" required>
-          </div>
-          <div class="col col-sm">
-            <label>Número*</label>
-            <input id="addrNumber" type="text" inputmode="numeric" required>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <label>Nome de quem irá receber*</label>
-            <input id="receiverName" type="text" required>
-          </div>
-          <label style="display:flex; gap:8px; align-items:center; user-select:none; margin-top:4px;">
-            <input id="preferTimeChk" type="checkbox" />
-            <span>Tenho preferência por horário</span>
-          </label>
-          <input id="preferTimeInput" type="time" style="display:none;" />
-        </div>
-        <label for="buyerNotes">Observações</label>
-        <textarea id="buyerNotes" rows="4" placeholder="Ex: Deixar na portaria, trocar alface por rúcula..." style="width:100%;resize:vertical"></textarea>
-      </form>
     </div>
   </section>
+      
+  <section class="client">
+        <div class="container">
+          <form id="clientDataForm" class="client-form" novalidate>
+            <div class="row">
+              <div class="col">
+                <label>Nome completo*</label>
+                <input id="clientFullName" type="text" required>
+              </div>
+              <div class="col">
+                <label>CPF ou CNPJ*</label>
+                <input id="clientDoc" type="text" inputmode="numeric" required placeholder="somente números">
+              </div>
+            </div>
+            <div class="buyer-info" id="deliveryForm">
+            <small class="hint" style="margin-bottom:6px;display:block">
+              Este é o <strong>endereço de ENTREGA</strong> (pode ser diferente do endereço da empresa).
+            </small>
+            <div class="row">
+              <div class="col">
+                <label>Bairro*</label>
+                <input id="addrNeighborhood" type="text" required>
+              </div>
+              <div class="col">
+                <label>Rua / Avenida*</label>
+                <input id="addrStreet" type="text" required>
+              </div>
+              <div class="col col-sm">
+                <label>Número*</label>
+                <input id="addrNumber" type="text" inputmode="numeric" required>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label>Nome de quem irá receber*</label>
+                <input id="receiverName" type="text" required>
+              </div>
+              <label style="display:flex; gap:8px; align-items:center; user-select:none; margin-top:4px;">
+                <input id="preferTimeChk" type="checkbox" />
+                <span>Tenho preferência por horário</span>
+              </label>
+              <input id="preferTimeInput" type="time" style="display:none;" />
+            </div>
+            <label for="buyerNotes">Observações</label>
+            <textarea id="buyerNotes" rows="4" placeholder="Ex: Deixar na portaria, trocar alface por rúcula..." style="width:100%;resize:vertical"></textarea>
+          </form>
+        </div>
+      </section>
 
   <main class="container">
     <p class="hint"><i class="fas fa-info-circle"></i> Toque em um item para escolher a <strong>variação</strong> (tamanho, embalagem, etc.).</p>
