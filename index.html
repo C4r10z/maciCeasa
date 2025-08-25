@@ -13,10 +13,10 @@
 <body>
   <header class="header">
     <div class="container">
-      <div class="brand">
-        <span class="dot" aria-hidden="true"></span>
-        <h1>Comercial <span class="celeiro">Celeiro</span></h1>
-      </div>
+    <div class="brand">
+      <img src="site/assets/celeiro-mark.svg" alt="" class="brand-mark" width="28" height="28">
+      <h1>Comercial <span class="celeiro">Celeiro</span></h1>
+    </div>
       <div class="header-actions">
         <input id="searchInput" type="text" placeholder="Buscar produto..." />
         <select id="categoryFilter" title="Filtrar categoria">
@@ -38,6 +38,10 @@
   <section class="hero">
     <div class="container small">
       <div class="hero-card">
+        <!-- selo pequeno no canto -->
+        <img class="hero-mark" src="site/assets/celeiro-mark.svg" alt="" width="44" height="44">
+
+
         <div class="hero-text">
           <h2>Bem-vindo à <strong>Comercial Celeiro</strong></h2>
           <p>Preencha seus dados, escolha as variações dos produtos e envie seu pedido. Nós cotamos e retornamos com os valores para você aprovar no WhatsApp.</p>
@@ -45,15 +49,16 @@
             <li><i class="fas fa-seedling"></i> Atacado CEASA • Barbacena/MG</li>
             <li><i class="fas fa-road"></i> BR 040 • KM 698 • CEASA</li>
             <li class="phones">
-            <i class="fas fa-phone" aria-hidden="true"></i>
-            <a class="tel" href="tel:+553233319687">(32) 3331-9687</a>
-            <a class="tel" href="tel:+553299831534">9983-1534</a>
-            <a class="tel" href="tel:+553299832505">9983-2505</a>
-          </li>
+              <i class="fas fa-phone" aria-hidden="true"></i>
+              <a class="tel" href="tel:+553233319687">(32)&nbsp;3331&#8209;9687</a>
+              <span class="sep" aria-hidden="true">•</span>
+              <a class="tel" href="tel:+553299832505">9983&#8209;2505</a>
+              <span class="sep" aria-hidden="true">•</span>
+              <a class="tel" href="tel:+5532999831534">9983&#8209;1534</a>
+            </li>
           </ul>
         </div>
-        <img class="hero-photo" src="site/assets/celeiro.jpg" alt="Comercial Celeiro">
-      </div>
+      <img class="hero-mark" src="site/assets/celeiro-mark.svg" alt="" width="44" height="44">
 
       <form id="clientDataForm" class="client-form" novalidate>
         <div class="row">
@@ -169,6 +174,52 @@
   <script src="site/product.js"></script>
   <script src="site/app.js"></script>
   
+  <script>
+  (function(){
+    const li = Array.from(document.querySelectorAll('.hero-points li'))
+      .find(n => n.querySelector('.fa-phone'));
+    if (!li) return;
+
+    // se já existem links separados, não faz nada
+    if (li.querySelectorAll('a.tel').length) return;
+
+    // captura texto após o ícone
+    const icon = li.querySelector('.fa-phone');
+    const raw = Array.from(li.childNodes)
+      .filter(n => n !== icon && !(n.nodeType === 1 && n.contains(icon)))
+      .map(n => n.textContent).join(' ').replace(/\s+/g,' ').trim();
+
+    if (!raw) return;
+
+    // detecta DDD inicial "(dd)" e separa por marcadores comuns
+    const dddMatch = raw.match(/\((\d{2})\)/);
+    const ddd = dddMatch ? dddMatch[1] : null;
+    const rest = raw.replace(/\(\d{2}\)\s*/, '');
+    const parts = rest.split(/[•,·]/).map(s => s.trim()).filter(Boolean);
+
+    // limpa li e reconstrói: ícone + chips + separadores visuais
+    li.innerHTML = ''; li.classList.add('phones'); li.appendChild(icon);
+    parts.forEach((txt, i) => {
+      const pretty = txt.replace(/-/g, '\u2011'); // hífen inquebrável
+      let digits = txt.replace(/\D/g,'');
+      if (ddd && (digits.length===8 || digits.length===9)) digits = ddd + digits;
+      if (!/^55/.test(digits) && (digits.length===10 || digits.length===11)) digits = '55' + digits;
+
+      const a = document.createElement('a');
+      a.className = 'tel';
+      a.href = 'tel:+' + digits;
+      a.textContent = (i===0 && dddMatch) ? `(${ddd})\u00A0${pretty}` : pretty;
+      li.appendChild(a);
+
+      if (i < parts.length - 1) {
+        const s = document.createElement('span');
+        s.className = 'sep'; s.textContent = '•';
+        li.appendChild(s);
+      }
+    });
+  })();
+  </script>
+
   <script>
   (function(){
     // Encontra o <li> com ícone de telefone

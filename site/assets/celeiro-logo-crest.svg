@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 520">
+
+  <defs>
+    <linearGradient id="duo" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e16b34"/>
+      <stop offset="100%" stop-color="#67b43a"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#67b43a"/>
+      <stop offset="100%" stop-color="#3e8b1e"/>
+    </linearGradient>
+    <linearGradient id="flare" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".35"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.4" result="b"/>
+      <feOffset dy="1" dx="0" result="o"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .22"/></feComponentTransfer>
+      <feMerge><feMergeNode in="o"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- subtle leaf pattern -->
+    <pattern id="leafTile" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="40" height="40" fill="none"/>
+      <path d="M8,30 C12,18 24,16 30,20 C34,22 36,26 34,30 C31,34 24,36 18,34"
+            fill="none" stroke="#67b43a" stroke-opacity=".15" stroke-width="2" stroke-linecap="round"/>
+      <path d="M28,10 C24,22 12,24 6,20" fill="none" stroke="#e16b34" stroke-opacity=".12" stroke-width="2" stroke-linecap="round"/>
+    </pattern>
+    <!-- wave underline clip -->
+    <clipPath id="waveClip">
+      <path d="M0,20 Q120,0 240,18 T480,18 T720,20 T960,18 T1200,20 L1200,60 L0,60 Z"/>
+    </clipPath>
+    <style>
+      .word { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <rect x="40" y="40" width="1320" height="440" rx="28" fill="#fff" stroke="url(#duo)" stroke-width="2"/>
+  <rect x="40" y="40" width="1320" height="440" rx="28" fill="url(#leafTile)" opacity=".35"/>
+  <!-- wreath lines (duo) -->
+  <g transform="translate(1220,120)">
+    <path d="M0,80 C30,40 80,20 140,30" fill="none" stroke="#67b43a" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>
+    <path d="M0,110 C40,70 100,60 150,78" fill="none" stroke="#e16b34" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <text class="word" x="120" y="160" font-size="68" fill="#1f2937" letter-spacing="6" style="font-variation-settings:'wght' 600">comercial</text>
+  <text class="word" x="120" y="320" font-size="200" fill="#e16b34" style="font-variation-settings:'wght' 800">Celeiro</text>
+
+  <!-- underline: wave duo with clip -->
+  <g transform="translate(120,335)">
+    <rect width="1040" height="60" fill="url(#duo)" clip-path="url(#waveClip)"/>
+    <rect width="1040" height="60" fill="url(#flare)" clip-path="url(#waveClip)" opacity=".65"/>
+  </g>
+
+  
+  <g transform="translate(1100,175) rotate(-8)" filter="url(#soft)">
+    <path d="M0,42 C10,5 58,-5 100,12 C134,26 148,60 122,90 C96,118 54,120 30,100 C8,82 -6,58 0,42 Z"
+          fill="url(#leafGrad)"/>
+    <path d="M24,78 C42,56 74,42 112,56" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="3" stroke-linecap="round"/>
+    <path d="M6,90 C-6,98 -14,104 -22,108" fill="none" stroke="#3e8b1e" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+</svg>

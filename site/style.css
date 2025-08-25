@@ -808,3 +808,169 @@ a[href^="tel:"]{
   text-decoration: none !important;
   -webkit-text-fill-color: currentColor; /* Safari */
 }
+/* Brand com ícone */
+.brand { gap:10px; }
+.brand-mark{
+  width:28px; height:28px; display:block;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.06));
+}
+
+/* Hero com logo (em vez de foto) */
+.hero-logo{
+  object-fit: contain;          /* evita corte */
+  background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.75));
+  padding: 10px;                /* respiro ao redor do svg */
+}
+
+/* Telefones: chips responsivos, sem azul do iOS */
+.hero-points .phones{
+  display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;
+}
+.hero-points .phones > i{
+  margin-right:2px;
+  background-image: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+.hero-points .tel{
+  display:inline-flex; align-items:center; white-space:nowrap; word-break:keep-all;
+  padding:6px 10px; border:1px solid var(--border); border-radius:999px;
+  background:#fff; color:inherit; text-decoration:none; line-height:1;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.hero-points .tel:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+}
+/* Safari/iOS: nunca azul */
+a[href^="tel:"]{
+  color: inherit !important;
+  text-decoration: none !important;
+  -webkit-text-fill-color: currentColor;
+}
+  
+/* ===== Brand (header) ===== */
+.brand { gap:10px; }
+.brand-mark{
+  width:28px; height:28px; display:block;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.06));
+}
+
+/* ===== Hero: sem imagem grande; selo no canto ===== */
+.hero-card{ grid-template-columns: 1fr; position: relative; }
+.hero-mark{
+  position:absolute; top:12px; right:12px;
+  width:44px; height:44px; display:block;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.12));
+  transition: transform .25s var(--ease);
+}
+.hero-mark:hover{ transform: scale(1.04); }
+
+/* ===== Telefones: chips separados e clicáveis ===== */
+.hero-points .phones{
+  display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;
+}
+.hero-points .phones > i{
+  margin-right:2px;
+  background-image: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+.hero-points .phones .sep{ opacity:.6; }
+
+/* Cada número é um chip próprio */
+.hero-points .tel{
+  display:inline-flex; align-items:center;
+  padding:6px 10px; line-height:1;
+  border:1px solid var(--border); border-radius:999px;
+  background:#fff; color:inherit; text-decoration:none;
+  white-space:nowrap; word-break:keep-all; hyphens:manual;
+  font-variant-numeric: tabular-nums;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.hero-points .tel:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+}
+
+/* iOS/Safari: nunca azul nojento e sem auto-merge */
+a[href^="tel:"]{
+  color: inherit !important;
+  text-decoration: none !important;
+  -webkit-text-fill-color: currentColor;
+}
+/* ===== Hero mark: responsivo, sem sobrepor título ===== */
+:root{
+  --hero-mark-size: 44px;
+  --hero-mark-gap: 12px;   /* distância das bordas */
+}
+
+/* Card em 1 coluna, com espaço reservado à direita p/ o selo */
+.hero-card{
+  grid-template-columns: 1fr !important;
+  position: relative;
+  padding-right: calc(var(--hero-mark-size) + var(--hero-mark-gap) + 10px);
+}
+
+/* Selo no canto superior direito (sem pegar o texto) */
+.hero-mark{
+  position: absolute;
+  top: var(--hero-mark-gap);
+  right: var(--hero-mark-gap);
+  width: var(--hero-mark-size);
+  height: var(--hero-mark-size);
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,.12));
+  transition: transform .25s var(--ease);
+  pointer-events: none; /* evita toques acidentais sobre o texto */
+  z-index: 1;
+}
+.hero-mark:hover{ transform: scale(1.04); }
+
+/* Telas estreitas: selo menor, reserva menor */
+@media (max-width: 480px){
+  :root{ --hero-mark-size: 36px; }
+  .hero-card{ padding-right: calc(var(--hero-mark-size) + var(--hero-mark-gap) + 8px); }
+}
+
+/* Telas muito estreitas: selo sai do absoluto e vira “linha de topo” alinhado à direita */
+@media (max-width: 380px){
+  .hero-card{ padding-right: 14px; }
+  .hero-mark{
+    position: static;
+    justify-self: end;   /* grida no topo, à direita */
+    align-self: start;
+    margin-bottom: 6px;
+  }
+}
+
+/* ===== Telefones: links separados SEM colar no iOS ===== */
+.hero-points .phones{
+  display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;
+}
+.hero-points .phones > i{
+  margin-right:2px;
+  background-image: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+.hero-points .phones .sep{ opacity:.6; }
+
+/* Cada número é um chip próprio (sem quebra interna) */
+.hero-points .tel{
+  display:inline-flex; align-items:center;
+  padding:6px 10px; line-height:1;
+  border:1px solid var(--border); border-radius:999px;
+  background:#fff; color:inherit; text-decoration:none;
+  white-space:nowrap; word-break:keep-all; hyphens:manual;
+  font-variant-numeric: tabular-nums;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.hero-points .tel:hover{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+
+/* iOS/Safari: herda cor e NÃO junta tudo num link só */
+a[href^="tel:"]{
+  color: inherit !important;
+  text-decoration: none !important;
+  -webkit-text-fill-color: currentColor;
+}
