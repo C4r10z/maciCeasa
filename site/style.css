@@ -1,125 +1,113 @@
 :root{
-  --bg:#ffffff;
-  --text:#2c3e50;
-  --muted:#7f8c8d;
-  --card:#f8fafc;
-  --border:#e5e7eb;
-  --accent-orange:#e16b34;       /* “Celeiro” */
-  --accent-orange-2:#c55726;
-  --accent-green:#67b43a;        /* folha “celeiro” */
-  --accent-green-2:#3e8b1e;
-  --accent-green-light:#eaf6e4;
-  --nature-light:#f4fbec;
-  --nature-dark:#33691e;
+  /* cores */
+  --bg:#ffffff; --text:#2c3e50; --muted:#7f8c8d;
+  --card:#f8fafc; --border:#e5e7eb;
+  --accent-orange:#e16b34; --accent-orange-2:#c55726;
+  --accent-green:#67b43a; --accent-green-2:#3e8b1e;
+  --accent-green-light:#eaf6e4; --nature-light:#f4fbec; --nature-dark:#33691e;
   --glass-bg: rgba(255,255,255,.72);
+  /* animação */
+  --ease: cubic-bezier(.2,.7,.2,1); --dur: .45s;
+  /* util */
+  --duo-1: var(--accent-orange); --duo-2: var(--accent-green);
+  --header-h: 64px;
+  /* hero mark + form */
+  --hero-mark-size: 44px; --hero-mark-gap: 12px;
+  /* inputs com label/ícone */
+  --field-h: 44px; --label-pad: 22px; --icon-gap: 36px;
   color-scheme: light;
-  --ease: cubic-bezier(.2,.7,.2,1);
-  --dur: .45s;
 }
 
+/* ===== reset básico ===== */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 *{scroll-behavior:smooth}
 a,button,[role="button"],.card,img{transition: all var(--dur) var(--ease)}
 html,body{
-  background:var(--bg);
-  color:var(--text);
+  background:var(--bg); color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;
-  line-height:1.55;
-  overflow-x:hidden;
+  line-height:1.55; overflow-x:hidden;
 }
 .container{max-width:1100px;margin:0 auto;padding:12px}
 .container.small{max-width:900px}
 
-/* ===================== BODY VISUAL (radial + grain) ===================== */
+/* ===== body visual (radial + grain) ===== */
 body{
   background:
     radial-gradient(1200px 800px at 10% -10%, #fff7f2 0%, transparent 60%),
     radial-gradient(900px 700px at 100% 0%, #f3fff0 0%, transparent 55%),
     var(--bg);
   position: relative;
-  padding-top: var(--header-h, 64px); /* espaço do header fixo */
+  padding-top: var(--header-h);
   transition: padding-top .2s var(--ease);
 }
 body::after{
-  content:"";
-  position: fixed; inset:0; pointer-events:none; z-index:-1;
-  opacity:.05;
+  content:""; position: fixed; inset:0; pointer-events:none; z-index:-1; opacity:.05;
   background-image: url("data:image/svg+xml;utf8,\
   <svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>\
-    <filter id='n'>\
-      <feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/>\
-      <feColorMatrix type='saturate' values='0'/>\
-      <feComponentTransfer><feFuncA type='table' tableValues='0 0 0 .2'/></feComponentTransfer>\
-    </filter>\
-    <rect width='100%' height='100%' filter='url(%23n)'/>\
-  </svg>");
+    <filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/>\
+    <feColorMatrix type='saturate' values='0'/>\
+    <feComponentTransfer><feFuncA type='table' tableValues='0 0 0 .2'/></feComponentTransfer></filter>\
+    <rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   background-size: 180px 180px;
 }
 
-/* ===================== HEADER FIXO + SHRINK ===================== */
+/* ===== header fixo + shrink ===== */
 .header{
   position: fixed; top:0; left:0; right:0; z-index:1000; width:100%;
   background:var(--glass-bg);
-  backdrop-filter: blur(10px) saturate(1.1);
-  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1);
   border-bottom:1px solid var(--border);
   box-shadow:0 8px 28px rgba(0,0,0,.08);
   transition: background .3s var(--ease), box-shadow .3s var(--ease);
 }
 .header::after{
-  content:""; position:absolute; left:0; right:0; bottom:0; height:2px;
-  background: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
-  opacity:.8;
+  content:""; position:absolute; left:0; right:0; bottom:0; height:2px; opacity:.9;
+  background: linear-gradient(90deg, var(--duo-1), var(--duo-2), var(--duo-1));
+  background-size: 200% 100%;
+  animation: gradShift 12s linear infinite;
 }
 .header .container{
   display:flex; flex-wrap:wrap; align-items:center; gap:12px; justify-content:space-between;
-  padding:14px 16px;
-  transition: padding .3s var(--ease);
+  padding:14px 16px; transition: padding .3s var(--ease);
 }
-.brand{display:flex;align-items:center;gap:8px}
+.brand{display:flex;align-items:center;gap:10px}
 .brand h1{font-size:20px;margin:0;color:#333;font-weight:700;letter-spacing:.3px;transition: font-size .3s var(--ease), transform .3s var(--ease)}
 .brand .celeiro{color:var(--accent-orange)}
-.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent-orange);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--accent-green);transition: width .3s var(--ease), height .3s var(--ease)}
-
+.brand-mark{width:28px; height:28px; display:block; filter: drop-shadow(0 1px 0 rgba(0,0,0,.06))}
 .header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;flex:1}
 .header input,.header select{
-  background:#fff;color:var(--text);
-  border:1px solid rgba(0,0,0,.08);
-  box-shadow: 0 1px 0 rgba(0,0,0,.02);
-  border-radius:12px; padding:10px 12px;
-  outline:none;transition:border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  background:#fff;color:var(--text); border:1px solid var(--border);
+  border-radius:12px; padding:10px 12px; outline:none;
+  transition:border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   font-size:14px;min-width:0;flex:1;max-width:160px;
 }
-.header input:focus,.header select:focus{border-color:var(--accent-green);box-shadow:0 0 0 2px var(--accent-green-light)}
 .header input::placeholder{color:var(--muted)}
-
 .header.shrink .container{ padding:6px 12px; }
 .header.shrink .brand h1{ font-size:16px; transform: translateY(-1px); }
-.header.shrink .brand .dot{ width:8px; height:8px; }
 .header.shrink{ background: rgba(255,255,255,.9); box-shadow: 0 8px 22px rgba(0,0,0,.08); }
 
-/* Mobile: brand na linha 1; buscar | categoria | carrinho na linha 2 */
+/* mobile header layout */
 @media (max-width: 768px){
-  .header .container{
-    display:grid;
-    grid-template-columns:1fr;
-    grid-template-areas:
-      "brand"
-      "actions";
-    gap:8px;
-  }
+  .header .container{ display:grid; grid-template-columns:1fr; grid-template-areas:"brand" "actions"; gap:8px; }
   .brand{ grid-area: brand; }
-  .header-actions{
-    grid-area: actions;
-    display:grid; grid-template-columns: 1fr 1fr auto; gap:8px; width:100%; align-items:center;
-  }
-  .header input,.header select{
-    width:100%; font-size:16px; padding:10px 12px; border-radius:12px;
-  }
+  .header-actions{ grid-area: actions; display:grid; grid-template-columns: 1fr 1fr auto; gap:8px; width:100%; align-items:center; }
+  .header input,.header select{ width:100%; font-size:16px; padding:10px 12px; border-radius:12px; }
   #openCartBtn{ padding:10px 12px; border-radius:14px; justify-content:center; }
 }
 
-/* ===================== BOTÕES ===================== */
+/* select: seta custom + normalização Safari */
+.header select{
+  -webkit-appearance: none; appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%),
+    linear-gradient(135deg, #6b7280 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position: calc(100% - 18px) calc(50% + 2px), calc(100% - 12px) calc(50% + 2px), 100% 0;
+  background-size: 6px 6px, 6px 6px, 2.2em 2.2em;
+  background-repeat: no-repeat; padding-right: 36px;
+}
+
+/* ===== botões ===== */
 .btn{
   background:#fff;border:1px solid var(--border);color:var(--text);
   padding:10px 14px;border-radius:20px;cursor:pointer;font-size:14px;
@@ -131,76 +119,129 @@ body::after{
 .btn.primary{
   position:relative; overflow:hidden;
   background:linear-gradient(180deg,var(--accent-orange),var(--accent-orange-2));
-  border-color:var(--accent-orange-2);color:#fff;font-weight:700
+  border-color:var(--accent-orange-2); color:#fff; font-weight:700;
 }
 .btn.primary::after{
   content:""; position:absolute; inset:-120% -40%;
   background: linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.55) 50%,rgba(255,255,255,0) 100%);
-  transform: rotate(20deg) translateX(-40%);
-  transition: transform .6s var(--ease);
+  transform: rotate(20deg) translateX(-40%); transition: transform .6s var(--ease);
 }
 .btn.primary:hover::after{ transform: rotate(20deg) translateX(35%); }
+.btn.primary .ripple{
+  position:absolute; border-radius:50%; transform:translate(-50%,-50%) scale(0);
+  background: rgba(255,255,255,.6); pointer-events:none; width:10px; height:10px; opacity:.8;
+  animation: ripple .6s ease-out forwards;
+}
 .btn.outline{border-color:var(--accent-green);color:var(--accent-green);font-weight:700}
 .pill{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);border-radius:999px;padding:8px 12px}
 .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent-green)}
 
-/* ===================== HERO ===================== */
+/* ===== hero ===== */
 .hero{padding:12px 0 4px; position: relative; overflow: visible;}
-.hero::before, .hero::after{
-  content:""; position:absolute; filter: blur(40px); z-index:-1; opacity:.35;
-}
-.hero::before{
-  width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle at 30% 30%, #ffd9c5, transparent 60%);
-  top:-60px; left:-40px;
-}
-.hero::after{
-  width:260px; height:260px; border-radius:50%;
-  background: radial-gradient(circle at 60% 60%, #d7f6c6, transparent 60%);
-  right:-30px; top:10px;
-}
+.hero::before, .hero::after{ content:""; position:absolute; -webkit-filter: blur(40px); filter: blur(40px); z-index:-1; opacity:.35; }
+.hero::before{ width:280px; height:280px; border-radius:50%; background: radial-gradient(circle at 30% 30%, #ffd9c5, transparent 60%); top:-60px; left:-40px; animation: float1 12s ease-in-out infinite; }
+.hero::after { width:260px; height:260px; border-radius:50%; background: radial-gradient(circle at 60% 60%, #d7f6c6, transparent 60%); right:-30px; top:10px; animation: float2 14s ease-in-out infinite; }
+
+/* card em 1 coluna + espaço reservado ao selo */
 .hero-card{
-  display:grid;grid-template-columns:1.6fr .9fr;gap:14px;align-items:center;
+  display:grid; grid-template-columns: 1fr; gap:14px; align-items:center;
   background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.6));
   border:1px solid rgba(0,0,0,.06); border-radius:14px; padding:14px;
   box-shadow:0 4px 14px rgba(0,0,0,.06); backdrop-filter: blur(6px);
+  position: relative; padding-right: calc(var(--hero-mark-size) + var(--hero-mark-gap) + 10px);
 }
-.hero-text h2{margin-bottom:6px}
-.hero-points{margin-top:8px;display:grid;gap:6px;color:var(--muted);font-size:14px}
-.hero-photo{ width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid var(--border) }
 
-@media (max-width: 768px){ .hero-card{grid-template-columns:1fr} }
+/* selo no canto; nunca sobrepõe o texto */
+.hero-mark{
+  position: absolute; top: var(--hero-mark-gap); right: var(--hero-mark-gap);
+  width: var(--hero-mark-size); height: var(--hero-mark-size);
+  display: block; filter: drop-shadow(0 2px 8px rgba(0,0,0,.12));
+  transition: transform .25s var(--ease); pointer-events: none; z-index: 1;
+}
+.hero-mark:hover{ transform: scale(1.04); }
+@media (max-width: 480px){
+  :root{ --hero-mark-size: 36px; }
+  .hero-card{ padding-right: calc(var(--hero-mark-size) + var(--hero-mark-gap) + 8px); }
+}
+@media (max-width: 380px){
+  .hero-card{ padding-right: 14px; }
+  .hero-mark{ position: static; justify-self: end; align-self: start; margin-bottom: 6px; }
+}
 
-/* ===================== CATÁLOGO & CARDS ===================== */
+/* título com marca-texto duo */
+.hero-text h2{ margin-bottom:6px; line-height:1.2; }
+.hero-text h2 strong{
+  background: linear-gradient(90deg, rgba(225,107,52,.28), rgba(103,180,58,.28));
+  border-radius: 6px; padding: 0 .18em;
+}
+
+/* lista de pontos */
+.hero-points{ margin-top:10px; color:#2c3e2c; display:grid; gap:8px; font-size:14px }
+.hero-points li{
+  display:grid; grid-template-columns: 20px 1fr; align-items:center; gap:8px;
+  padding:6px 8px; border-radius:10px;
+  background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.55));
+  border:1px solid rgba(0,0,0,.05);
+}
+
+/* telefones como chips separados (com separador visual fora do link) */
+.hero-points .phones{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; }
+.hero-points .phones > i{
+  margin-right:2px;
+  background-image: linear-gradient(90deg, var(--duo-1), var(--duo-2));
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+}
+.hero-points .phones .sep{ opacity:.6; }
+.hero-points .tel{
+  display:inline-flex; align-items:center; line-height:1;
+  padding:6px 10px; border:1px solid var(--border); border-radius:999px;
+  background:#fff; color:inherit; text-decoration:none;
+  white-space:nowrap; word-break:keep-all; hyphens:manual;
+  font-variant-numeric: tabular-nums;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.hero-points .tel:hover{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+/* iOS: herda cor e não cola tudo num link só */
+a[href^="tel:"]{ color: inherit !important; text-decoration: none !important; -webkit-text-fill-color: currentColor; }
+
+/* ===== catálogo & cards ===== */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-top:16px}
 .card{
   background: linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,.5));
   border:1px solid rgba(0,0,0,.06); border-radius:14px; padding:14px;
   display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;
-  box-shadow:0 4px 12px rgba(0,0,0,.05);
-  transform: translateZ(0);
+  box-shadow:0 4px 12px rgba(0,0,0,.05); transform: translateZ(0);
 }
-.card::before{
-  content:"";position:absolute;top:0;left:0;right:0;height:4px;
-  background:linear-gradient(90deg,var(--accent-orange),var(--accent-green));opacity:.95
-}
+.card::before{ content:"";position:absolute;top:0;left:0;right:0;height:4px; background: linear-gradient(90deg, var(--duo-1), var(--duo-2)); opacity:.95 }
 .card:hover{
   transform:translateY(-3px) scale(1.01);
   box-shadow: 0 14px 28px rgba(0,0,0,.12),
               0 0 0 1px rgba(225,107,52,.15),
-              0 0 0 6px rgba(103,180,58,.06);
+              0 0 0 6px rgba(103,180,58,.08);
+}
+.grid .card:nth-child(even):hover{
+  box-shadow: 0 14px 28px rgba(0,0,0,.12),
+              0 0 0 1px rgba(103,180,58,.15),
+              0 0 0 6px rgba(225,107,52,.08);
 }
 .card img{border-radius:10px;transform:scale(1.02)}
 .card:hover img{transform:scale(1.06)}
 .card h3{margin:0;font-size:15px;color:#2a3b2a}
 .badge{display:inline-block;font-size:11px;color:#fff;background: linear-gradient(180deg, var(--accent-green), var(--accent-green-2));border:0;padding:2px 8px;border-radius:999px}
+.grid .card:nth-child(even) .badge{ background: linear-gradient(180deg, var(--accent-orange), var(--accent-orange-2)); }
 .hint{color:var(--muted);font-size:13px;margin:8px 0}
+.container .hint{ position: relative; padding-top: 14px; }
+.container .hint::before{
+  content:""; position:absolute; top:0; left:0; right:0; height:4px; border-radius:999px;
+  background: linear-gradient(90deg, var(--duo-1), var(--duo-2), var(--duo-1)); opacity:.65;
+}
 
-/* ===================== REVEAL ON SCROLL (consolidado) ===================== */
+/* ===== reveal on scroll ===== */
 .reveal{opacity:0; transform: translateY(18px);}
 .reveal.is-visible{opacity:1; transform: translateY(0);}
 
-/* ===================== DRAWER (CARRINHO) ===================== */
+/* ===== drawer (carrinho) ===== */
 .drawer{
   position:fixed; inset:0; background:rgba(0,0,0,.4);
   display:flex; justify-content:flex-end; z-index:1000;
@@ -213,9 +254,7 @@ body::after{
   transform: translateX(100%); transition: transform .35s var(--ease);
 }
 .drawer.open .drawer-content{ transform: translateX(0); box-shadow: -14px 0 36px rgba(0,0,0,.18); }
-/* blur leve no conteúdo quando o drawer está aberto */
 body.drawer-open main{filter: blur(3px) saturate(.95); transition: filter var(--dur) var(--ease)}
-
 .drawer-header{
   display:flex;justify-content:space-between;align-items:center;padding:16px 18px;
   border-bottom:1px solid var(--border);background:var(--nature-light);position:sticky;top:0;z-index:10
@@ -233,11 +272,11 @@ body.drawer-open main{filter: blur(3px) saturate(.95); transition: filter var(--
 .client-badge{padding:8px 12px;border-bottom:1px dashed var(--border);font-size:13px;color:var(--muted)}
 .totals{display:flex;justify-content:space-between;padding:10px 12px;background:var(--nature-light);border:1px solid var(--border);border-radius:10px;font-weight:600;font-size:15px}
 
-/* ===================== MODAL VARIAÇÕES ===================== */
+/* ===== modal variações ===== */
 .modal-backdrop{
   position:fixed; inset:0; background:rgba(0,0,0,.45);
   display:none; align-items:center; justify-content:center; z-index:1002;
-  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
   opacity:0; transition: opacity var(--dur) var(--ease);
 }
 .modal-backdrop.open{ display:flex; opacity:1; }
@@ -253,16 +292,14 @@ body.drawer-open main{filter: blur(3px) saturate(.95); transition: filter var(--
 .variant-option{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--border);padding:8px;border-radius:10px}
 .variant-option:hover{box-shadow:0 6px 16px rgba(0,0,0,.08);transform: translateY(-2px)}
 .variant-qty{display:flex; align-items:center; gap:10px; margin:12px 0}
-
-/* Quantidade (stepper) */
 .variant-qty label{flex:0 0 auto; font-weight:600; font-size:14px}
 #variantQty{
   width:70px; text-align:center; padding:8px 10px; font-size:15px;
   border:1px solid var(--border); border-radius:8px; outline:none;
   transition: border-color .25s var(--ease), box-shadow .25s var(--ease);
-  background:#fff; box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  background:#fff;
 }
-#variantQty:focus{ border-color: var(--accent-green); box-shadow: 0 0 0 2px var(--accent-green-light); }
+#variantQty:focus{ border-color: #94a3b8; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
 .qty-btn{
   background:#fff; border:1px solid var(--border); border-radius:6px; width:34px; height:34px;
   display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;
@@ -271,24 +308,80 @@ body.drawer-open main{filter: blur(3px) saturate(.95); transition: filter var(--
 .qty-btn:hover{ transform: translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.08) }
 .qty-btn:active{ transform: scale(.95) }
 
-/* ===================== FORM CLIENTE ===================== */
+/* ===== form cliente (cartão + labels flutuantes + ícones) ===== */
 .client-form{margin-top:12px;display:grid;gap:10px}
-.client-form .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.client-form .col{display:flex;flex-direction:column;gap:6px}
-.client-form .col-sm{max-width:180px}
-.client-form input,.client-form textarea{
-  background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;outline:none;
-  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease)
-}
-.client-form input:focus,.client-form textarea:focus{border-color:var(--accent-green);box-shadow:0 0 0 2px var(--accent-green-light)}
+.client-form .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 @media (max-width: 768px){ .client-form .row{grid-template-columns:1fr} }
+#clientDataForm{
+  margin-top:16px; background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.8));
+  border:1px solid var(--border); border-radius:16px; padding:14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.06); position: relative; overflow: visible;
+}
+#clientDataForm::before{
+  content:""; position:absolute; left:0; right:0; top:0; height:4px; border-radius:16px 16px 0 0;
+  background: linear-gradient(90deg, var(--duo-1), var(--duo-2)); opacity:.85; z-index:0;
+}
 
-/* ===================== ÍCONES / TOAST ===================== */
+.client-form .col{ position: relative; padding-top: var(--label-pad); display:flex; flex-direction:column; gap:6px }
+.client-form input,.client-form textarea{
+  background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px;
+  min-height: var(--field-h); padding-left: var(--icon-gap);
+  outline:none; transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  color: var(--text);
+}
+.client-form input:focus,.client-form textarea:focus{ border-color: #94a3b8; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
+
+.client-form .col label{
+  position:absolute; left: calc(var(--icon-gap) + 4px); top: 8px;
+  font-size: 13px; color:#6b7280; background:#fff; padding: 0 6px; border-radius: 6px;
+  transform-origin: left top; transition: transform .25s var(--ease), color .25s var(--ease), opacity .25s var(--ease);
+  pointer-events: none; z-index:2;
+}
+.client-form .col:has(input:focus) label,
+.client-form .col:has(textarea:focus) label,
+.client-form input:required:valid + label,
+.client-form textarea:required:valid + label{
+  transform: translateY(-14px) scale(.92); color:#475569; opacity:.95;
+}
+
+/* ícones via FA */
+.client-form .col::before{
+  content:""; position: absolute; left:12px; top: calc(var(--label-pad) + (var(--field-h) / 2));
+  transform: translateY(-50%); font-family:"Font Awesome 6 Free"; font-weight:900; font-size:16px; line-height:1; color:#94a3b8; opacity:.9; pointer-events:none; z-index:1;
+}
+.client-form .col:has(#clientFullName)::before{ content:"\f007"; }
+.client-form .col:has(#clientDoc)::before{ content:"\f2bb"; }
+.client-form .col:has(#addrNeighborhood)::before{ content:"\f64f"; }
+.client-form .col:has(#addrStreet)::before{ content:"\f018"; }
+.client-form .col:has(#addrNumber)::before{ content:"#"; font-family: inherit; font-weight:700; }
+.client-form .col:has(#receiverName)::before{ content:"\f4fc"; }
+#buyerNotes{ padding-left: var(--icon-gap); }
+.client-form .col:has(#buyerNotes)::before{ content:"\f249"; }
+
+#deliveryForm > .hint{
+  background: #fff; border: 1px dashed var(--border); border-radius: 10px;
+  padding: 8px 10px; color: #2a3b2a;
+}
+#preferTimeChk{ accent-color: var(--accent-green); }
+#preferTimeInput{
+  border-radius:10px; border:1px solid var(--border); padding:8px 10px;
+  transition: border-color .25s var(--ease), box-shadow .25s var(--ease);
+}
+#preferTimeInput:focus{ border-color: #94a3b8; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
+
+/* campo observações */
+#buyerNotes{
+  padding: 10px; border: 1px solid #ccc; border-radius: 6px;
+  font-size: .95rem; font-family: inherit; min-height: 80px;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+#buyerNotes:focus{ outline:none; border-color:#94a3b8; box-shadow:0 0 0 2px rgba(148,163,184,.25); }
+
+/* ===== ícones / toast ===== */
 .icon-btn{background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;transition:transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease)}
 .icon-btn:hover{transform: translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,.08)}
 .toast{
-  position:fixed;bottom:20px;left:50%;
-  transform:translateX(-50%) translateY(100px);
+  position:fixed;bottom:20px;left:50%; transform:translateX(-50%) translateY(100px);
   background:#101a10;color:#eaffea;border:1px solid rgba(103,180,58,.3);
   padding:12px 18px;border-radius:10px;
   box-shadow:0 12px 28px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;z-index:1200;
@@ -297,682 +390,53 @@ body.drawer-open main{filter: blur(3px) saturate(.95); transition: filter var(--
 .toast i{ color:#8ef36a; }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ===================== SKELETON ===================== */
+/* ===== skeleton ===== */
 .skel{
   background: linear-gradient(90deg, #eef2f7 25%, #f5f7fa 37%, #eef2f7 63%);
   background-size: 400% 100%; animation: shimmer 1.2s infinite linear;
   border-radius: 12px; min-height: 140px; border:1px solid var(--border)
 }
-@keyframes shimmer{0%{background-position:0 0}100%{background-position:100% 0}}
 
-/* ===================== PERFORMANCE ===================== */
+/* ===== performance ===== */
 .section-pesada{content-visibility:auto; contain-intrinsic-size: 600px}
 .animated{will-change: transform, opacity}
 
-/* ===================== CAMPO OBSERVAÇÕES ===================== */
-#buyerNotes {
-  padding: 10px; border: 1px solid #ccc; border-radius: 6px;
-  font-size: 0.95rem; font-family: inherit; min-height: 80px;
-  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-}
-#buyerNotes:focus { outline: none; border-color: #16a34a; box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2); }
-
-/* ===================== MOBILE FAB (opcional) ===================== */
+/* ===== mobile FAB (opcional) ===== */
 @media (max-width: 768px){
   .fab-cart{
-    position: fixed; right: 12px; bottom: 12px; z-index: 1100;
-    display: none;
+    position: fixed; right: 12px; bottom: 12px; z-index: 1100; display: none;
     background: linear-gradient(180deg, var(--accent-orange), var(--accent-orange-2));
-    color:#fff; border:none; border-radius: 999px;
-    padding: 12px 16px; box-shadow: 0 10px 24px rgba(225,107,52,.35);
-    font-weight:700; gap:8px; align-items:center;
+    color:#fff; border:none; border-radius: 999px; padding: 12px 16px;
+    box-shadow: 0 10px 24px rgba(225,107,52,.35); font-weight:700; gap:8px; align-items:center;
   }
   .fab-cart i{ font-size:16px; }
   .fab-cart.show{ display:flex; }
 }
 
-/* ===================== TOUCH / ACESSO ===================== */
+/* ===== compat iOS/Safari ===== */
+html { -webkit-text-size-adjust: 100%; }
+.cart-items { -webkit-overflow-scrolling: touch; }
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .header{ background-color: rgba(255,255,255,.96); }
+  .modal-backdrop{ background: rgba(0,0,0,.55); }
+}
+@supports (padding: max(0px)) { .header{ padding-top: env(safe-area-inset-top); } }
+main{ will-change: filter; transform: translateZ(0); }
+
+/* ===== touch ===== */
 a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation; }
 
-/* ===================== REDUZIR MOVIMENTO ===================== */
-@media (prefers-reduced-motion: reduce){
-  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
-  .reveal{ opacity:1 !important; transform:none !important; }
-  .drawer, .drawer-content, .variant-card { transition:none !important; }
-  body.drawer-open main, body.modal-open main { filter:none !important; }
-}
-/* ---------- HERO: título com destaque suave + lista com ícones melhores ---------- */
-.hero-text h2{
-  line-height: 1.2;
-}
-.hero-text h2 strong{
-  padding: 0 .15em;
-  box-shadow: inset 0 -0.45em 0 var(--accent-green-light);
-  border-radius: 6px;
-}
-.hero-text h2 strong::after{
-  font-size: .8em;
-  margin-left: .25em;
-  opacity:.7;
-}
-
-/* Lista com marcação mais agradável */
-.hero-points{
-  margin-top:10px;
-  color:#2c3e2c;
-  gap:8px;
-}
-.hero-points li{
-  display:grid;
-  grid-template-columns: 20px 1fr;
-  align-items:center;
-  gap:8px;
-  padding:6px 8px;
-  border-radius:10px;
-  background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.55));
-  border:1px solid rgba(0,0,0,.05);
-}
-.hero-points i{
-  color: var(--accent-green-2);
-  display:inline-flex; align-items:center; justify-content:center;
-}
-
-/* ---------- FORM: cartão elegante com filete degradê ---------- */
-#clientDataForm{
-  margin-top:16px;
-  background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.8));
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:14px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.06);
-  position: relative;
-}
-#clientDataForm::before{
-  content:""; position:absolute; left:0; right:0; top:0; height:4px; border-radius:16px 16px 0 0;
-  background: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
-  opacity:.85;
-}
-
-/* Informação do endereço (texto de ajuda) com melhor visual */
-#deliveryForm > .hint{
-  background: #fff;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  padding: 8px 10px;
-  color: #2a3b2a;
-}
-
-/* ---------- Rótulos flutuantes (sem mexer no HTML) ---------- */
-.client-form .col{ position: relative; padding-top: 22px; }
-.client-form .col label{
-  position:absolute; left:12px; top:10px;
-  font-size: 13px; color: var(--muted);
-  background:#fff; padding: 0 6px; border-radius: 6px;
-  transform-origin: left top;
-  transition: transform .25s var(--ease), color .25s var(--ease), opacity .25s var(--ease);
-  pointer-events: none;
-}
-/* base: inputs com espaço para ícone/label */
-.client-form input, .client-form textarea{
-  padding-left: 36px;  /* espaço p/ ícones (abaixo) e label */
-}
-
-/* foco ou preenchido => “flutua” o label */
-.client-form .col:has(input:focus),
-.client-form .col:has(textarea:focus),
-.client-form .col.has-value{
-  /* gatilho visual, nada aqui */
-}
-.client-form .col:has(input:focus) label,
-.client-form .col:has(textarea:focus) label,
-.client-form .col.has-value label{
-  transform: translateY(-14px) scale(.92);
-  color: var(--nature-dark);
-  opacity: .95;
-}
-
-/* estados de validade (campos required) */
-.client-form input:required:valid,
-.client-form textarea:required:valid{
-  border-color: var(--accent-green);
-  box-shadow: 0 0 0 2px var(--accent-green-light);
-}
-.client-form input:invalid:focus{
-  border-color: #ff7a7a;
-  box-shadow: 0 0 0 2px rgba(255, 85, 85, .15);
-}
-
-/* ---------- Ícones nos campos (via Font Awesome) ---------- */
-.client-form .col::before{
-  content:"";
-  position:absolute; left:12px; top: calc(50% + 2px);
-  transform: translateY(-50%);
-  font-family: "Font Awesome 6 Free";
-  font-weight: 900;
-  color: var(--muted);
-  opacity:.9;
-}
-/* Nome */
-.client-form .col:has(#clientFullName)::before{ content:"\f007"; }        /* user */
-/* CPF/CNPJ */
-.client-form .col:has(#clientDoc)::before{ content:"\f2bb"; }             /* id-card */
-/* Bairro */
-.client-form .col:has(#addrNeighborhood)::before{ content:"\f64f"; }      /* house */
-/* Rua */
-.client-form .col:has(#addrStreet)::before{ content:"\f018"; }            /* road */
-/* Número */
-.client-form .col:has(#addrNumber)::before{ content:"#"; font-family: inherit; font-weight:700; }
-/* Quem recebe */
-.client-form .col:has(#receiverName)::before{ content:"\f4fc"; }          /* user-check */
-/* Observações (textarea) */
-#buyerNotes{ padding-left: 36px; }
-.client-form .col:has(#buyerNotes)::before{ content:"\f249"; }            /* sticky-note */
-
-/* Checkbox/horário compactos */
-#preferTimeChk{ accent-color: var(--accent-green); }
-#preferTimeInput{
-  border-radius:10px; border:1px solid var(--border); padding:8px 10px;
-  transition: border-color .25s var(--ease), box-shadow .25s var(--ease);
-}
-#preferTimeInput:focus{ border-color: var(--accent-green); box-shadow: 0 0 0 2px var(--accent-green-light); }
-
-/* ---------- Pequenos toques ---------- */
-.hero + .client-form{ margin-top: 16px; }
-.client-form .row{ gap:12px; } /* um respiro a mais */
-/* === FIX ÍCONES CORTANDO NOS CAMPOS === */
-:root{
-  --field-h: 44px;   /* altura mínima do input/textarea */
-  --label-pad: 22px; /* espaço reservado pro rótulo flutuante */
-  --icon-gap: 36px;  /* largura reservada pro ícone à esquerda */
-}
-
-/* garante camada correta: o filete do form fica por trás do conteúdo */
-#clientDataForm{ position: relative; overflow: visible; }
-#clientDataForm::before{ z-index: 0; }
-
-/* altura e padding consistente nos campos */
-.client-form .col{ position: relative; padding-top: var(--label-pad); }
-.client-form input,
-.client-form textarea{
-  min-height: var(--field-h);
-  padding-left: var(--icon-gap); /* espaço pro ícone */
-}
-
-/* rótulo flutuante vai pra direita do ícone e acima do input */
-.client-form .col label{
-  left: calc(var(--icon-gap) + 4px); /* antes estava 12px, sobrepunha o ícone */
-  top: 8px;                          /* um pouco mais alto pra não “roçar” no ícone */
-  z-index: 2;
-  background: #fff;
-}
-
-/* ícone centralizado na área do INPUT (não do .col inteiro) */
-.client-form .col::before{
-  position: absolute;
-  left: 12px;
-  top: calc(var(--label-pad) + (var(--field-h) / 2));
-  transform: translateY(-50%);
-  font-family: "Font Awesome 6 Free";
-  font-weight: 900;
-  font-size: 16px;
-  line-height: 1;
-  color: var(--muted);
-  opacity: .9;
-  z-index: 1;             /* abaixo do label, acima do fundo */
-  pointer-events: none;
-}
-
-/* inputs com ícone ficam um tiquinho mais altos no mobile pra tocar melhor */
-@media (max-width:768px){
-  :root{ --field-h: 48px; }
-}
-#cartCount{ display:inline-block; min-width:1.2em; text-align:center }
-@keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.25)}60%{transform:scale(.95)}100%{transform:scale(1)}}
-#cartCount.bump{ animation: bump .45s var(--ease) }
+/* ===== keyframes ===== */
+@keyframes shimmer{0%{background-position:0 0}100%{background-position:100% 0}}
+@keyframes gradShift{ 0%{background-position:0% 50%} 100%{background-position:100% 50%} }
 @keyframes float1{ 0%{transform:translate(0,0)} 50%{transform:translate(10px,8px)} 100%{transform:translate(0,0)} }
 @keyframes float2{ 0%{transform:translate(0,0)} 50%{transform:translate(-10px,6px)} 100%{transform:translate(0,0)} }
-.hero::before{ animation: float1 12s ease-in-out infinite; }
-.hero::after{  animation: float2 14s ease-in-out infinite; }
-@keyframes gradShift{ 0%{background-position:0% 50%} 100%{background-position:100% 50%} }
-.header::after{
-  background: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
-  background-size: 200% 100%;
-  animation: gradShift 10s linear infinite;
-  opacity:.9;
-}
-.btn.primary{ position:relative; overflow:hidden; }
-.btn.primary .ripple{
-  position:absolute; border-radius:50%; transform:translate(-50%,-50%) scale(0);
-  background: rgba(255,255,255,.6); pointer-events:none; width:10px; height:10px; opacity:.8;
-  animation: ripple .6s ease-out forwards;
-}
 @keyframes ripple{ to{ transform:translate(-50%,-50%) scale(35); opacity:0 } }
-/* =============== Duo-tone helpers (laranja + verde, suaves) =============== */
-:root{
-  --duo-1: var(--accent-orange);
-  --duo-2: var(--accent-green);
-}
 
-/* Gradiente “duo” pronto pra reutilizar */
-.duo-grad{ background-image: linear-gradient(90deg, var(--duo-1), var(--duo-2)); }
+/* ===== extras ===== */
+#cartCount{ display:inline-block; min-width:1.2em; text-align:center }
+#cartCount.bump{ animation: bump .45s var(--ease) }
+@keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.25)}60%{transform:scale(.95)}100%{transform:scale(1)}}
 
-/* Header: filete animado usando as duas cores (sem pesar) */
-@keyframes gradShift { 0%{background-position:0% 50%} 100%{background-position:100% 50%} }
-.header::after{
-  background: linear-gradient(90deg, var(--duo-1), var(--duo-2), var(--duo-1));
-  background-size: 200% 100%;
-  animation: gradShift 12s linear infinite;
-  opacity:.9;
-}
-
-/* Hero: marca-texto do <strong> com blend das duas cores */
-.hero-text h2 strong{
-  box-shadow: none;
-  background: linear-gradient(90deg, rgba(225,107,52,.28), rgba(103,180,58,.28));
-  border-radius: 6px;
-  padding: 0 .18em;
-}
-
-/* Cards: faixa do topo usando duo-tone; hover com anel alternado */
-.card::before{
-  background: linear-gradient(90deg, var(--duo-1), var(--duo-2));
-  opacity:.95;
-}
-/* alterna o “anel” do hover entre verde e laranja para dar variedade */
-.grid .card:hover{
-  box-shadow:
-    0 14px 28px rgba(0,0,0,.12),
-    0 0 0 1px rgba(225,107,52,.15),
-    0 0 0 6px rgba(103,180,58,.08);
-}
-.grid .card:nth-child(even):hover{
-  box-shadow:
-    0 14px 28px rgba(0,0,0,.12),
-    0 0 0 1px rgba(103,180,58,.15),
-    0 0 0 6px rgba(225,107,52,.08);
-}
-
-/* Badges: alterna suavemente entre laranja e verde */
-.badge{ background: linear-gradient(180deg, var(--accent-green), var(--accent-green-2)); }
-.grid .card:nth-child(even) .badge{
-  background: linear-gradient(180deg, var(--accent-orange), var(--accent-orange-2));
-}
-
-/* Divisor decorativo (hint) em duo-tone */
-.container .hint::before{
-  background: linear-gradient(90deg, var(--duo-1), var(--duo-2), var(--duo-1));
-  opacity:.65;
-}
-
-/* ================== INPUTS NEUTROS (sem cor-tinta) ================== */
-/* Fundo branco, borda cinza, foco neutro acessível (sem laranja/verde) */
-.client-form input,
-.client-form textarea,
-.header input,
-.header select,
-#variantQty{
-  background: #fff !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: none !important;
-  color: var(--text);
-}
-
-/* Foco neutro (cinza/azulado) para acessibilidade sem “pintar” de cor */
-.client-form input:focus,
-.client-form textarea:focus,
-.header input:focus,
-.header select:focus,
-#variantQty:focus{
-  border-color: #94a3b8 !important;             /* slate-400 */
-  box-shadow: 0 0 0 2px rgba(148,163,184,.25) !important;
-  outline: none;
-}
-
-/* Labels flutuantes e ícones dos campos também neutros */
-.client-form .col label{
-  background:#fff;
-  color:#6b7280; /* slate-500 */
-}
-.client-form .col::before{ color:#94a3b8; opacity:.9; }
-
-/* Setinha do <select> neutra (sem laranja/verde) */
-.header select{
-  appearance: none;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #6b7280 50%), /* slate-500 */
-    linear-gradient(135deg, #6b7280 50%, transparent 50%),
-    linear-gradient(to right, transparent, transparent);
-  background-position:
-    calc(100% - 18px) calc(50% + 2px),
-    calc(100% - 12px) calc(50% + 2px),
-    100% 0;
-  background-size: 6px 6px, 6px 6px, 2.2em 2.2em;
-  background-repeat: no-repeat;
-  padding-right: 36px;
-}
-
-/* ================== DETALHES QUE MISTURAM AS DUAS CORES ================== */
-/* Botão outline fica verde; primary já é laranja → duo natural no conjunto */
-.btn.outline{ border-color: var(--accent-green); color: var(--accent-green); }
-.btn.primary{ background: linear-gradient(180deg, var(--accent-orange), var(--accent-orange-2)); }
-
-/* Hero list icons puxando levemente p/ as duas cores, sem exagero */
-.hero-points i{
-  background: linear-gradient(90deg, var(--duo-1), var(--duo-2));
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent;
-}
-/* ===== iOS/Safari compat: tipografia e scroll ===== */
-html { -webkit-text-size-adjust: 100%; }                  /* evita zoom/auto-ajuste de fonte */
-.cart-items { -webkit-overflow-scrolling: touch; }        /* rolagem suave no drawer */
-
-/* ===== Backdrop blur: prefixos + fallback elegante ===== */
-.header{
-  background-color: rgba(255,255,255,.72);                /* precisa de cor translúcida p/ blur funcionar */
-  -webkit-backdrop-filter: blur(10px) saturate(1.1);
-  backdrop-filter: blur(10px) saturate(1.1);
-}
-.modal-backdrop{
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-}
-@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .header{ background-color: rgba(255,255,255,.96); }     /* degrada para sólido */
-  .modal-backdrop{ background: rgba(0,0,0,.55); }         /* mantém contraste no overlay */
-}
-
-/* ===== Header fixo + notch (safe area) ===== */
-@supports (padding: max(0px)) {
-  .header{ padding-top: env(safe-area-inset-top); }       /* espaço p/ notch do iPhone */
-}
-
-/* ===== Blur do MAIN quando modal/drawer abrem: evita flicker no Safari ===== */
-main{
-  will-change: filter;
-  transform: translateZ(0);                                /* cria contexto e estabiliza o filtro */
-}
-
-/* ===== Hero blobs: prefixo no filter para engines antigas ===== */
-.hero::before, .hero::after{ -webkit-filter: blur(40px); }
-
-/* ===== Select: seta custom + normalização no Safari ===== */
-.header select{
-  -webkit-appearance: none; appearance: none;              /* remove estilo nativo do iOS */
-  background-image:
-    linear-gradient(45deg, transparent 50%, #6b7280 50%),
-    linear-gradient(135deg, #6b7280 50%, transparent 50%),
-    linear-gradient(to right, transparent, transparent);
-  background-position:
-    calc(100% - 18px) calc(50% + 2px),
-    calc(100% - 12px) calc(50% + 2px),
-    100% 0;
-  background-size: 6px 6px, 6px 6px, 2.2em 2.2em;
-  background-repeat: no-repeat;
-  padding-right: 36px;
-}
-
-/* ===== Labels flutuantes sem :has() (iOS antigo): use classes .is-focus/.has-value ===== */
-/* Já mantém inputs NEUTROS (sem cor) como você pediu */
-.client-form .col{ position: relative; padding-top: 22px; }
-.client-form .col label{
-  position:absolute; left: 36px; top: 8px;                 /* 36px = espaço do ícone à esquerda */
-  font-size: 13px; color:#6b7280;                          /* neutro */
-  background:#fff; padding:0 6px; border-radius:6px;
-  transform-origin: left top;
-  transition: transform .25s var(--ease), color .25s var(--ease), opacity .25s var(--ease);
-  pointer-events:none; z-index:2;
-}
-.client-form input, .client-form textarea{ padding-left: 36px; } /* espaço p/ ícone */
-
-.client-form .col.is-focus label,
-.client-form .col.has-value label{
-  transform: translateY(-14px) scale(.92);
-  color: #475569;                                          /* slate-600, legível */
-}
-
-/* Ícones dos campos alinhados no iOS */
-.client-form .col::before{
-  position:absolute; left:12px;
-  top: calc(22px + 22px);                                  /* 22 label-pad + ~metade do input */
-  transform: translateY(-50%);
-  font-family:"Font Awesome 6 Free"; font-weight:900;
-  font-size: 16px; line-height:1; color:#94a3b8; opacity:.9;
-  pointer-events:none; z-index:1;
-}
-
-/* ===== Botões/form normalizados no iOS ===== */
-button, input, select, textarea { -webkit-appearance: none; border-radius: 12px; }
-input[type="time"]{ -webkit-appearance: none; }            /* evita picker deformar o input */
-/* Telefones: chips que não quebram e se organizam em linhas */
-.hero-points .phones{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 10px;
-  align-items: center;
-}
-.hero-points .phones > i{ margin-right: 2px; color: var(--accent-orange-2); }
-
-.hero-points .tel{
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
-  color: inherit;
-  text-decoration: none;
-  line-height: 1;
-  white-space: nowrap;   /* não quebra dentro do número */
-  word-break: keep-all;
-  hyphens: manual;
-  font-variant-numeric: tabular-nums; /* dígitos alinhados */
-  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-}
-.hero-points .tel:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,.08);
-}
-
-/* Garante que o Safari não pinte links "tel:" em azul estranho */
-a[href^="tel:"]{ color: inherit; }
-/* Linha de telefones: chips responsivos e sem quebra interna */
-.hero-points .phones{
-  display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;
-}
-
-/* Ícone com degradê laranja→verde (compatível com Safari) */
-.hero-points .phones > i{
-  margin-right:4px;
-  background-image: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent; -webkit-text-fill-color: transparent;
-}
-
-/* Chips de telefone */
-.hero-points .tel{
-  display:inline-flex; align-items:center; line-height:1;
-  padding:6px 10px; border:1px solid var(--border); border-radius:999px;
-  background:#fff; color:inherit; text-decoration:none;
-  white-space:nowrap; word-break:keep-all; hyphens:manual;
-  font-variant-numeric: tabular-nums;
-  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-}
-.hero-points .tel:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,.08);
-}
-
-/* iOS: NÃO azul! Força herdar cor do texto nos links tel: */
-a[href^="tel:"]{
-  color: inherit !important;
-  text-decoration: none !important;
-  -webkit-text-fill-color: currentColor; /* Safari */
-}
-/* Brand com ícone */
-.brand { gap:10px; }
-.brand-mark{
-  width:28px; height:28px; display:block;
-  filter: drop-shadow(0 1px 0 rgba(0,0,0,.06));
-}
-
-/* Hero com logo (em vez de foto) */
-.hero-logo{
-  object-fit: contain;          /* evita corte */
-  background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.75));
-  padding: 10px;                /* respiro ao redor do svg */
-}
-
-/* Telefones: chips responsivos, sem azul do iOS */
-.hero-points .phones{
-  display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;
-}
-.hero-points .phones > i{
-  margin-right:2px;
-  background-image: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent; -webkit-text-fill-color: transparent;
-}
-.hero-points .tel{
-  display:inline-flex; align-items:center; white-space:nowrap; word-break:keep-all;
-  padding:6px 10px; border:1px solid var(--border); border-radius:999px;
-  background:#fff; color:inherit; text-decoration:none; line-height:1;
-  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-}
-.hero-points .tel:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,.08);
-}
-/* Safari/iOS: nunca azul */
-a[href^="tel:"]{
-  color: inherit !important;
-  text-decoration: none !important;
-  -webkit-text-fill-color: currentColor;
-}
-  
-/* ===== Brand (header) ===== */
-.brand { gap:10px; }
-.brand-mark{
-  width:28px; height:28px; display:block;
-  filter: drop-shadow(0 1px 0 rgba(0,0,0,.06));
-}
-
-/* ===== Hero: sem imagem grande; selo no canto ===== */
-.hero-card{ grid-template-columns: 1fr; position: relative; }
-.hero-mark{
-  position:absolute; top:12px; right:12px;
-  width:44px; height:44px; display:block;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,.12));
-  transition: transform .25s var(--ease);
-}
-.hero-mark:hover{ transform: scale(1.04); }
-
-/* ===== Telefones: chips separados e clicáveis ===== */
-.hero-points .phones{
-  display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;
-}
-.hero-points .phones > i{
-  margin-right:2px;
-  background-image: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent; -webkit-text-fill-color: transparent;
-}
-.hero-points .phones .sep{ opacity:.6; }
-
-/* Cada número é um chip próprio */
-.hero-points .tel{
-  display:inline-flex; align-items:center;
-  padding:6px 10px; line-height:1;
-  border:1px solid var(--border); border-radius:999px;
-  background:#fff; color:inherit; text-decoration:none;
-  white-space:nowrap; word-break:keep-all; hyphens:manual;
-  font-variant-numeric: tabular-nums;
-  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-}
-.hero-points .tel:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,.08);
-}
-
-/* iOS/Safari: nunca azul nojento e sem auto-merge */
-a[href^="tel:"]{
-  color: inherit !important;
-  text-decoration: none !important;
-  -webkit-text-fill-color: currentColor;
-}
-/* ===== Hero mark: responsivo, sem sobrepor título ===== */
-:root{
-  --hero-mark-size: 44px;
-  --hero-mark-gap: 12px;   /* distância das bordas */
-}
-
-/* Card em 1 coluna, com espaço reservado à direita p/ o selo */
-.hero-card{
-  grid-template-columns: 1fr !important;
-  position: relative;
-  padding-right: calc(var(--hero-mark-size) + var(--hero-mark-gap) + 10px);
-}
-
-/* Selo no canto superior direito (sem pegar o texto) */
-.hero-mark{
-  position: absolute;
-  top: var(--hero-mark-gap);
-  right: var(--hero-mark-gap);
-  width: var(--hero-mark-size);
-  height: var(--hero-mark-size);
-  display: block;
-  filter: drop-shadow(0 2px 8px rgba(0,0,0,.12));
-  transition: transform .25s var(--ease);
-  pointer-events: none; /* evita toques acidentais sobre o texto */
-  z-index: 1;
-}
-.hero-mark:hover{ transform: scale(1.04); }
-
-/* Telas estreitas: selo menor, reserva menor */
-@media (max-width: 480px){
-  :root{ --hero-mark-size: 36px; }
-  .hero-card{ padding-right: calc(var(--hero-mark-size) + var(--hero-mark-gap) + 8px); }
-}
-
-/* Telas muito estreitas: selo sai do absoluto e vira “linha de topo” alinhado à direita */
-@media (max-width: 380px){
-  .hero-card{ padding-right: 14px; }
-  .hero-mark{
-    position: static;
-    justify-self: end;   /* grida no topo, à direita */
-    align-self: start;
-    margin-bottom: 6px;
-  }
-}
-
-/* ===== Telefones: links separados SEM colar no iOS ===== */
-.hero-points .phones{
-  display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center;
-}
-.hero-points .phones > i{
-  margin-right:2px;
-  background-image: linear-gradient(90deg, var(--accent-orange), var(--accent-green));
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent; -webkit-text-fill-color: transparent;
-}
-.hero-points .phones .sep{ opacity:.6; }
-
-/* Cada número é um chip próprio (sem quebra interna) */
-.hero-points .tel{
-  display:inline-flex; align-items:center;
-  padding:6px 10px; line-height:1;
-  border:1px solid var(--border); border-radius:999px;
-  background:#fff; color:inherit; text-decoration:none;
-  white-space:nowrap; word-break:keep-all; hyphens:manual;
-  font-variant-numeric: tabular-nums;
-  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-}
-.hero-points .tel:hover{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.08); }
-
-/* iOS/Safari: herda cor e NÃO junta tudo num link só */
-a[href^="tel:"]{
-  color: inherit !important;
-  text-decoration: none !important;
-  -webkit-text-fill-color: currentColor;
-}
-/* espaçamento suave abaixo do hero quando o form sai do mesmo container */
+/* ===== seção client separada do hero ===== */
 .client .container{ margin-top: 12px; }
