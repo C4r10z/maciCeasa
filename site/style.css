@@ -95,7 +95,7 @@ body::after{
   #openCartBtn{ padding:10px 12px; border-radius:14px; justify-content:center; }
 }
 
-/* select: seta custom + normalização Safari */
+/* select: seta custom + normalização Safari (fallback se não usar .ps) */
 .header select{
   -webkit-appearance: none; appearance: none;
   background-image:
@@ -184,7 +184,7 @@ body::after{
   border:1px solid rgba(0,0,0,.05);
 }
 
-/* telefones como chips separados (com separador visual fora do link) */
+/* telefones como chips separados */
 .hero-points .phones{ display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center; }
 .hero-points .phones > i{
   margin-right:2px;
@@ -202,7 +202,6 @@ body::after{
   transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 .hero-points .tel:hover{ transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.08); }
-/* iOS: herda cor e não cola tudo num link só */
 a[href^="tel:"]{ color: inherit !important; text-decoration: none !important; -webkit-text-fill-color: currentColor; }
 
 /* ===== catálogo & cards ===== */
@@ -288,25 +287,82 @@ body.drawer-open main{filter: blur(3px) saturate(.95); transition: filter var(--
 .modal-backdrop.open .variant-card{ transform: translateY(0) scale(1); opacity:1; }
 .variant-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .variant-img{width:100%;height:180px;object-fit:cover;border-radius:10px;border:1px solid var(--border);margin:8px 0}
+
+/* Campos do modal */
 .variant-options{display:grid;gap:8px;margin:10px 0}
-.variant-option{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--border);padding:8px;border-radius:10px}
-.variant-option:hover{box-shadow:0 6px 16px rgba(0,0,0,.08);transform: translateY(-2px)}
 .variant-qty{display:flex; align-items:center; gap:10px; margin:12px 0}
 .variant-qty label{flex:0 0 auto; font-weight:600; font-size:14px}
 #variantQty{
-  width:70px; text-align:center; padding:8px 10px; font-size:15px;
+  width:110px; text-align:center; padding:8px 10px; font-size:15px;
   border:1px solid var(--border); border-radius:8px; outline:none;
   transition: border-color .25s var(--ease), box-shadow .25s var(--ease);
-  background:#fff;
+  background:#fff; letter-spacing:.2px;
 }
 #variantQty:focus{ border-color: #94a3b8; box-shadow: 0 0 0 2px rgba(148,163,184,.25); }
 .qty-btn{
-  background:#fff; border:1px solid var(--border); border-radius:6px; width:34px; height:34px;
+  background:#fff; border:1px solid var(--border); border-radius:6px; width:40px; height:40px;
   display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;
-  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease), background .15s var(--ease);
 }
 .qty-btn:hover{ transform: translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.08) }
-.qty-btn:active{ transform: scale(.95) }
+.qty-btn:active{ transform: scale(.98) }
+
+.variant-card .field-grid {
+  display:grid; grid-template-columns:1fr; gap:12px; margin-top:6px;
+}
+@media (min-width: 720px){
+  .variant-card .field-grid { grid-template-columns: 1fr 1fr; }
+}
+.variant-card .field-block label {
+  display:block; font-size:12px; color:#6b7280; margin:2px 0 6px;
+}
+.variant-card .field,
+.variant-card select,
+.variant-card input[type="text"],
+.variant-card input[type="number"]{
+  width:100%; height:44px; border:1px solid var(--border); border-radius:10px;
+  background:#fff; padding:0 12px; font:inherit; color:inherit; outline:none;
+  transition:border-color .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease);
+}
+.variant-card .field:focus,
+.variant-card select:focus,
+.variant-card input[type="text"]:focus,
+.variant-card input[type="number"]:focus{
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 3px rgba(16,185,129,.18);
+}
+/* Select nativo (fallback) */
+.variant-card select{
+  -webkit-appearance:none; appearance:none; padding-right:36px;
+  background-image:url("data:image/svg+xml;utf8,<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6 9l6 6 6-6' stroke='%23727b83' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat:no-repeat; background-position:right 10px center;
+}
+
+/* Chips de Subvariação */
+.option-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+.option-chips .chip{
+  position:relative; display:inline-flex; align-items:center; cursor:pointer; user-select:none;
+}
+.option-chips .chip input{
+  position:absolute; width:1px; height:1px; margin:-1px; border:0; padding:0;
+  clip:rect(0 0 0 0); clip-path: inset(50%); overflow:hidden;
+}
+.option-chips .chip span{
+  position:relative; z-index:0; display:inline-block; padding:8px 12px;
+  border-radius:999px; border:1px solid var(--border); background:#fff; color:#111827; font-size:14px;
+  transition: background .15s var(--ease), border-color .15s var(--ease), color .15s var(--ease), box-shadow .15s var(--ease);
+}
+.option-chips .chip:hover span{ border-color:#94a3b8; }
+.option-chips .chip input:focus + span{
+  box-shadow:0 0 0 3px rgba(16,185,129,.18); border-color: var(--accent-green);
+}
+.option-chips .chip input:checked + span{
+  background: var(--accent-green); color:#fff; border-color: transparent;
+}
+
+/* Dica de unidade & botão do modal */
+#variantUnitHint{ margin-left:auto; color:#6b7280; }
+#variantAddBtn{ margin-top:12px; }
 
 /* ===== form cliente (cartão + labels flutuantes + ícones) ===== */
 .client-form{margin-top:12px;display:grid;gap:10px}
@@ -432,11 +488,16 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
 @keyframes float1{ 0%{transform:translate(0,0)} 50%{transform:translate(10px,8px)} 100%{transform:translate(0,0)} }
 @keyframes float2{ 0%{transform:translate(0,0)} 50%{transform:translate(-10px,6px)} 100%{transform:translate(0,0)} }
 @keyframes ripple{ to{ transform:translate(-50%,-50%) scale(35); opacity:0 } }
+@keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.25)}60%{transform:scale(.95)}100%{transform:scale(1)}}
 
 /* ===== extras ===== */
 #cartCount{ display:inline-block; min-width:1.2em; text-align:center }
 #cartCount.bump{ animation: bump .45s var(--ease) }
-@keyframes bump{0%{transform:scale(1)}30%{transform:scale(1.25)}60%{transform:scale(.95)}100%{transform:scale(1)}}
+.muted{ color: var(--muted); }
+.tag{
+  display:inline-block; margin-left:6px; padding:2px 8px;
+  font-size:11px; border-radius:999px; background:#f3f4f6; color:#374151; border:1px solid #e5e7eb;
+}
 
 /* ===== seção client separada do hero ===== */
 .client .container{ margin-top: 12px; }
@@ -447,5 +508,154 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  -webkit-text-fill-color: transparent; /* Safari/iOS */
+  -webkit-text-fill-color: transparent;
+}
+
+/* =========================================================
+   CORES POR CATEGORIA — APENAS NO MODAL (variant-card)
+   ========================================================= */
+.variant-card.cat-frutas   { --accent:#ff6b6b; }
+.variant-card.cat-legumes  { --accent:#4ecdc4; }
+.variant-card.cat-verduras { --accent:#22c55e; }
+.variant-card.cat-temperos { --accent:#f59e0b; }
+.variant-card.cat-outros   { --accent:#6366f1; }
+
+.variant-card[class*="cat-"]{
+  border-top: 6px solid var(--accent);
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.12);
+}
+.variant-card[class*="cat-"] .variant-head h3{ color: var(--accent); }
+
+/* Badge da categoria dentro do modal */
+.cat-badge{
+  display:inline-block; padding:4px 10px; border-radius:999px;
+  font-size:12px; font-weight:600; border:1px solid transparent;
+}
+.variant-card.cat-frutas   .cat-badge{ background: rgba(255,107,107,.15); color:#b91c1c; border-color: rgba(255,107,107,.45); }
+.variant-card.cat-legumes  .cat-badge{ background: rgba(78,205,196,.18); color:#0f766e; border-color: rgba(78,205,196,.45); }
+.variant-card.cat-verduras .cat-badge{ background: rgba(34,197,94,.16);  color:#166534; border-color: rgba(34,197,94,.45); }
+.variant-card.cat-temperos .cat-badge{ background: rgba(245,158,11,.16); color:#92400e; border-color: rgba(245,158,11,.45); }
+.variant-card.cat-outros   .cat-badge{ background: rgba(99,102,241,.16); color:#3730a3; border-color: rgba(99,102,241,.45); }
+
+/* Botão do modal herdando a cor da categoria */
+.variant-card[class*="cat-"] #variantAddBtn{
+  background: var(--accent);
+  border-color: var(--accent);
+  color:#fff; font-weight:700;
+}
+.variant-card[class*="cat-"] #variantAddBtn:hover{ filter: brightness(1.05); transform: translateY(-1px); }
+.variant-card[class*="cat-"] #variantAddBtn:active{ transform: translateY(0) scale(.98); }
+
+/* === Pretty Select (custom dropdown) — GLOBAL === */
+.ps{ position:relative; }
+.ps select{ display:none !important; } /* escondemos o nativo */
+
+.ps .ps-trigger{
+  width:100%; height:44px;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 12px; border:1px solid var(--border); border-radius:10px;
+  background:#fff; color:inherit; font:inherit; cursor:pointer;
+  transition:border-color .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease);
+}
+.ps .ps-trigger:focus{
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 3px rgba(16,185,129,.18); outline:none;
+}
+.ps .ps-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ps .ps-caret{
+  flex:0 0 auto; width:18px; height:18px; opacity:.7;
+  background-repeat:no-repeat; background-size:contain;
+  background-image:url("data:image/svg+xml;utf8,<svg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M6 9l6 6 6-6' stroke='%23727b83' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  transition: transform .15s var(--ease);
+}
+.ps.open .ps-caret{ transform: rotate(180deg); }
+
+.ps .ps-menu{
+  position:absolute; left:0; right:0; top:calc(100% + 6px);
+  background:#fff; border:1px solid var(--border); border-radius:10px;
+  box-shadow:0 12px 28px rgba(0,0,0,.14);
+  max-height:240px; overflow:auto; z-index:1500; display:none;
+}
+.ps.open .ps-menu{ display:block; }
+
+.ps .ps-option{
+  padding:10px 12px; cursor:pointer; user-select:none;
+}
+.ps .ps-option:hover,
+.ps .ps-option[aria-selected="true"]{ background:rgba(103,180,58,.10); }
+.ps .ps-option:focus{ outline:none; background:rgba(103,180,58,.16); }
+.ps .ps-option.disabled{ opacity:.45; cursor:not-allowed; }
+
+/* Variante compacta pro HEADER */
+.header .ps{ min-width:160px; max-width:160px; flex:1; }
+.ps.ps--compact .ps-trigger{ height:38px; border-radius:12px; font-size:14px; }
+
+/* Overrides no modal para o dropdown (altura e empilhamento) */
+.variant-card .ps .ps-trigger{ height:44px; }
+.variant-card .ps .ps-menu{ z-index:2000; }
+
+/* ================================
+   Cores por categoria (cards)
+   ================================ */
+.card.cat-frutas   { --c1:#b91c1c; --c2:#ff6b6b; --c3:#ffe4e6; }
+.card.cat-legumes  { --c1:#0f766e; --c2:#4ecdc4; --c3:#d9f6f3; }
+.card.cat-verduras { --c1:#166534; --c2:#22c55e; --c3:#e6f6ea; }
+.card.cat-temperos { --c1:#92400e; --c2:#f59e0b; --c3:#fff1c7; }
+.card.cat-outros   { --c1:#3730a3; --c2:#6366f1; --c3:#ecebff; }
+
+/* Topo do card com gradiente da categoria */
+.card[class*="cat-"]::before{
+  content:""; position:absolute; top:0; left:0; right:0; height:4px;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+  opacity:.95;
+}
+
+/* Badge da categoria dentro do card */
+.card[class*="cat-"] .badge{
+  background: var(--c3);
+  color: var(--c1);
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+/* Hover do card com leve sombra colorida */
+.card[class*="cat-"]:hover{
+  box-shadow:
+    0 14px 28px rgba(0,0,0,.12),
+    0 0 0 1px color-mix(in srgb, var(--c2) 35%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--c2) 18%, transparent);
+}
+@supports not (color-mix(in srgb, #000 50%, #fff)) {
+  .card[class*="cat-"]:hover{ box-shadow: 0 14px 28px rgba(0,0,0,.12); }
+}
+/* ===== FIX cores por categoria (evitar mistura) ===== */
+
+/* 1) Neutraliza a barra global e usa só em cards SEM categoria */
+.card::before{ background: none; }
+.card:not([class*="cat-"])::before{
+  background: linear-gradient(90deg, var(--duo-1), var(--duo-2));
+}
+
+/* 2) Desativa estilos alternados do grid que competiam com as categorias */
+.grid .card:nth-child(even) .badge{
+  background: initial; color: inherit; border-color: rgba(0,0,0,.06);
+}
+.grid .card:nth-child(even):hover{
+  box-shadow: none;
+}
+
+/* 3) Garante que o badge e o hover sigam a paleta da categoria */
+.grid .card[class*="cat-"] .badge{
+  background: var(--c3);
+  color: var(--c1);
+  border: 1px solid rgba(0,0,0,.06);
+}
+.grid .card[class*="cat-"]:hover{
+  box-shadow:
+    0 14px 28px rgba(0,0,0,.12),
+    0 0 0 1px color-mix(in srgb, var(--c2) 35%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--c2) 18%, transparent);
+}
+@supports not (color-mix(in srgb, #000 50%, #fff)) {
+  .grid .card[class*="cat-"]:hover{ box-shadow: 0 14px 28px rgba(0,0,0,.12); }
 }

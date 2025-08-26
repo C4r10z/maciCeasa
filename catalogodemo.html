@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Catálogo CEASA — Demo subvariação + embalagem</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font-family: system-ui, Arial, sans-serif; margin: 24px; background:#f7f7f7; }
+  h1 { margin: 0 0 16px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:16px; }
+  .card { background:#fff; border-radius:12px; box-shadow: 0 2px 10px rgba(0,0,0,.06); padding:14px; }
+  .card-header { display:flex; gap:12px; align-items:center; }
+  .card-header img { width:72px; height:72px; object-fit:cover; border-radius:10px; background:#eee; }
+  .card-header h3 { margin:0; font-size:18px; }
+  .card-header small { color:#666; }
+  label { font-size:12px; color:#333; margin:8px 0 4px; display:block; }
+  select, input[type=number] { width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; background:#fff; }
+  .btn { display:inline-block; padding:10px 12px; border-radius:8px; border:0; background:#0b7; color:#fff; cursor:pointer; width:100%; margin-top:10px; }
+  .btn:active { transform: translateY(1px); }
+  .row { display:flex; gap:8px; }
+  .row > * { flex:1; }
+  .muted { color:#777; font-size:12px; }
+  .topbar { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .search { flex:1; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Catálogo CEASA</h1>
+  <input id="search" class="search" type="search" placeholder="Buscar produto..." />
+</div>
+
+<div id="catalog" class="grid"></div>
+
+<script>
+// ==============================
+// MODELO: embalagens (P)
+const P = {
+  kg:            [ { id:'kg',      label:'Por kg',      unit:'kg',      qtyStep:0.1 } ],
+  cx:            [ { id:'cx',      label:'Caixa',       unit:'caixa',   qtyStep:1,  multiplier:10 } ],
+  saco:          [ { id:'saco',    label:'Saco',        unit:'saco',    qtyStep:1,  multiplier:20 } ],
+  unid:          [ { id:'un',      label:'Unidade',     unit:'unid',    qtyStep:1 } ],
+  duzia:         [ { id:'dz',      label:'Dúzia',       unit:'dúzia',   qtyStep:1,  multiplier:12 } ],
+  cumbuca:       [ { id:'cumbuca', label:'Cumbuca',     unit:'cumbuca', qtyStep:1 } ],
+  bandeja:       [ { id:'bandeja', label:'Bandeja',     unit:'bandeja', qtyStep:1 } ],
+
+  kg_cx:         [ { id:'kg', label:'Por kg', unit:'kg', qtyStep:0.1 }, { id:'cx', label:'Caixa', unit:'caixa', qtyStep:1, multiplier:10 } ],
+  kg_saco:       [ { id:'kg', label:'Por kg', unit:'kg', qtyStep:0.1 }, { id:'saco', label:'Saco', unit:'saco', qtyStep:1, multiplier:20 } ],
+  kg_cx_saco:    [ { id:'kg', label:'Por kg', unit:'kg', qtyStep:0.1 }, { id:'cx', label:'Caixa', unit:'caixa', qtyStep:1, multiplier:10 }, { id:'saco', label:'Saco', unit:'saco', qtyStep:1, multiplier:20 } ],
+  caixa_ou_kg:   [ { id:'cx', label:'Caixa', unit:'caixa', qtyStep:1, multiplier:10 }, { id:'kg', label:'Por kg', unit:'kg', qtyStep:0.1 } ],
+  cumbuca_ou_kg: [ { id:'kg', label:'Por kg', unit:'kg', qtyStep:0.1 }, { id:'cumbuca', label:'Cumbuca', unit:'cumbuca', qtyStep:1 } ],
+  unidade_ou_dz: [ { id:'un', label:'Unidade', unit:'unid', qtyStep:1 }, { id:'dz', label:'Dúzia', unit:'dúzia', qtyStep:1, multiplier:12 } ],
+  cx_ou_unid:    [ { id:'cx', label:'Caixa', unit:'caixa', qtyStep:1, multiplier:10 }, { id:'un', label:'Unidade', unit:'unid', qtyStep:1 } ],
+
+  laranja_pera_sacos: [
+    { id:'saco-18',   label:'Saco 18',   unit:'saco', qtyStep:1, multiplier:18 },
+    { id:'saco-20',   label:'Saco 20',   unit:'saco', qtyStep:1, multiplier:20 },
+    { id:'meio-saco', label:'Meio saco', unit:'saco', qtyStep:1 } // defina multiplier se quiser somar peso estimado
+  ],
+};
+const mergePack = (...groups) => {
+  const byId = {};
+  groups.flat().forEach(p => { byId[p.id] = p; });
+  return Object.values(byId);
+};
+
+// ==============================
+// CATÁLOGO: subvariações e embalagens separadas
+window.PRODUCTS = [
+  // FRUTAS
+  { id: 1,  name:"Abacaxi", category:"Frutas", image:"site/assets/abacaxi.webp",
+    subvariants:[{id:'graudo',label:'Graúdo'},{id:'medio',label:'Médio'}],
+    packagings:P.unidade_ou_dz
+  },
+  { id: 2,  name:"Ameixa", category:"Frutas", image:"site/assets/ameixa.webp",
+    packagings:P.cx
+  },
+  { id: 3,  name:"Limão Taiti", category:"Frutas", image:"site/assets/limao-taiti.webp",
+    packagings:P.kg_saco
+  },
+  { id: 4,  name:"Laranja Pêra Rio", category:"Frutas", image:"site/assets/laranja-pera-rio.webp",
+    packagings:P.laranja_pera_sacos
+  },
+  { id: 5,  name:"Mamão", category:"Frutas", image:"site/assets/mamao.webp",
+    subvariants:[{id:'havai',label:'Havaí'},{id:'formosa',label:'Formosa'}],
+    packagings:P.caixa_ou_kg
+  },
+  { id: 6,  name:"Manga", category:"Frutas", image:"site/assets/manga.webp",
+    subvariants:[{id:'palmer',label:'Palmer'},{id:'tommy',label:'Tommy'}],
+    packagings:P.kg_cx
+  },
+  { id: 7,  name:"Maracujá", category:"Frutas", image:"site/assets/maracuja.webp",
+    packagings:P.kg_cx
+  },
+  { id: 8,  name:"Melão", category:"Frutas", image:"site/assets/melao.webp",
+    packagings:P.kg_cx
+  },
+  { id: 9,  name:"Melancia", category:"Frutas", image:"site/assets/melancia.webp",
+    packagings:P.kg
+  },
+  { id:10,  name:"Maçã", category:"Frutas", image:"site/assets/maca.webp",
+    subvariants:[{id:'gala',label:'Gala'},{id:'fuji',label:'Fuji'},{id:'importada',label:'Importada'}],
+    packagings:P.kg_cx
+  },
+  { id:11,  name:"Pera", category:"Frutas", image:"site/assets/pera.webp",
+    subvariants:[{id:'comum',label:'Comum'},{id:'wilhans',label:'Wilhans'},{id:'parkins',label:'Parkins'}],
+    packagings:P.kg_cx
+  },
+  { id:12,  name:"Uva", category:"Frutas", image:"site/assets/uva.webp",
+    subvariants:[{id:'thompson',label:'Thompson'},{id:'vitoria',label:'Vitória'},{id:'red-lov',label:'Red Lov'}],
+    packagings:P.cumbuca_ou_kg
+  },
+  { id:13,  name:"Kiwi", category:"Frutas", image:"site/assets/kiwi.webp",
+    packagings:P.cumbuca_ou_kg
+  },
+  { id:14,  name:"Banana", category:"Frutas", image:"site/assets/banana.webp",
+    subvariants:[{id:'prata',label:'Prata'},{id:'caturra',label:'Caturra'}],
+    packagings:P.kg_cx
+  },
+  { id:15,  name:"Abacate", category:"Frutas", image:"site/assets/abacate.webp",
+    packagings:P.kg_cx
+  },
+
+  // LEGUMES / RAÍZES / TEMPEROS
+  { id:16,  name:"Batata Doce", category:"Legumes", image:"site/assets/batata-doce.webp",
+    subvariants:[{id:'branca',label:'Branca'},{id:'roxa',label:'Roxa'}],
+    packagings:P.kg_saco
+  },
+  { id:17,  name:"Batata Inglesa", category:"Legumes", image:"site/assets/batata-inglesa.webp",
+    subvariants:[
+      {id:'media-suja',label:'Média Suja'},
+      {id:'grauda-suja',label:'Graúda Suja'},
+      {id:'grauda-lav',label:'Graúda Lavada'},
+      {id:'media-lav',label:'Média Lavada'}
+    ],
+    packagings:P.kg_saco
+  },
+  { id:18,  name:"Batata Asterix", category:"Legumes", image:"site/assets/batata-asterix.webp",
+    packagings:P.kg_saco
+  },
+  { id:19,  name:"Beterraba", category:"Legumes", image:"site/assets/beterraba.webp",
+    subvariants:[{id:'2a',label:'2A'},{id:'g',label:'G'}],
+    packagings:P.kg_cx
+  },
+  { id:20,  name:"Cenoura", category:"Legumes", image:"site/assets/cenoura.webp",
+    subvariants:[{id:'2a',label:'2A'},{id:'especial',label:'Especial'}],
+    packagings:P.kg_cx
+  },
+  { id:21,  name:"Chuchu", category:"Legumes", image:"site/assets/chuchu.webp",
+    packagings:P.kg_cx
+  },
+  { id:22,  name:"Inhame", category:"Legumes", image:"site/assets/inhame.webp",
+    packagings:P.kg_cx
+  },
+  { id:23,  name:"Pimentão", category:"Legumes", image:"site/assets/pimentao.webp",
+    subvariants:[{id:'verde',label:'Verde'},{id:'amarelo',label:'Amarelo'},{id:'vermelho',label:'Vermelho'}],
+    packagings:P.kg_cx
+  },
+  { id:24,  name:"Quiabo", category:"Legumes", image:"site/assets/quiabo.webp",
+    packagings:P.kg_cx
+  },
+  { id:25,  name:"Alho", category:"Temperos", image:"site/assets/alho.webp",
+    subvariants:[
+      {id:'n4',label:'n4'},
+      {id:'n5',label:'n5'},
+      {id:'n6',label:'n6'},
+      {id:'descascado',label:'Descascado', packagings:P.kg} // override: só kg
+    ],
+    packagings:P.kg_cx
+  },
+  { id:26,  name:"Cebola", category:"Legumes", image:"site/assets/cebola.webp",
+    subvariants:[{id:'media',label:'Média'},{id:'grauda',label:'Graúda'},{id:'roxa',label:'Roxa'}],
+    packagings:P.kg_saco
+  },
+
+  // TOMATE (família com grape override)
+  { id:27,  name:"Tomate", category:"Legumes", image:"site/assets/tomate.webp",
+    subvariants:[
+      {id:'graudo-3a',label:'Graúdo 3A'},
+      {id:'medio-2a',label:'Médio 2A'},
+      {id:'molho',label:'Pra Molho'},
+      {id:'grape',label:'Grape', packagings:P.cumbuca_ou_kg}
+    ],
+    packagings:P.kg_cx
+  },
+
+  { id:28,  name:"Jiló", category:"Legumes", image:"site/assets/jilo.webp",
+    packagings:P.kg_cx
+  },
+  { id:29,  name:"Abobrinha Italiana", category:"Legumes", image:"site/assets/abobrinha-italiana.webp",
+    packagings:P.kg_cx
+  },
+  { id:30,  name:"Pepino", category:"Legumes", image:"site/assets/pepino.webp",
+    subvariants:[{id:'japones',label:'Japonês'},{id:'caipira',label:'Caipira'}],
+    packagings:P.kg_cx
+  },
+  { id:31,  name:"Repolho", category:"Verduras", image:"site/assets/repolho.webp",
+    subvariants:[{id:'verde',label:'Verde'},{id:'roxo',label:'Roxo'}],
+    packagings:P.kg_cx
+  },
+  { id:32,  name:"Moranga", category:"Legumes", image:"site/assets/moranga.webp",
+    packagings:P.kg_saco
+  },
+  { id:33,  name:"Abóbora Jacaré", category:"Legumes", image:"site/assets/abobora-jacare.webp",
+    packagings:P.kg_saco
+  },
+
+  // VERDURAS / FOLHOSAS
+  { id:34,  name:"Brócolis", category:"Verduras", image:"site/assets/brocolis.webp",
+    packagings:P.unid
+  },
+  { id:35,  name:"Vagem", category:"Verduras", image:"site/assets/vagem.webp",
+    packagings: mergePack(P.kg_ou_bandeja || [], P.cx) // caixa, kg ou bandeja
+  },
+  { id:36,  name:"Berinjela", category:"Legumes", image:"site/assets/berinjela.webp",
+    packagings:P.kg_cx
+  },
+  { id:37,  name:"Couve-Flor", category:"Verduras", image:"site/assets/couve-flor.webp",
+    packagings:P.cx_ou_unid
+  },
+];
+
+// ==============================
+// UI — Subvar + Embalagem separados (sem variants combinadas)
+function getSelectedPackaging(product, subvarId, packagingId) {
+  const sub = (product.subvariants || []).find(sv => sv.id === subvarId);
+  const packs = (sub && Array.isArray(sub.packagings)) ? sub.packagings : (product.packagings || []);
+  return packs.find(p => p.id === packagingId) || null;
+}
+function inferQtyStep(pack) {
+  if (!pack) return 1;
+  if (pack.qtyStep != null) return pack.qtyStep;
+  return pack.unit === 'kg' ? 0.1 : 1;
+}
+
+function renderCatalog(products, containerSel = "#catalog") {
+  const $root = document.querySelector(containerSel);
+  if (!$root) return;
+
+  $root.innerHTML = products.map(p => {
+    const hasSub = Array.isArray(p.subvariants) && p.subvariants.length > 0;
+    const basePacks = p.packagings || [];
+
+    const defaultSubId = hasSub ? p.subvariants[0].id : null;
+    const packsForDefault = hasSub && p.subvariants[0].packagings ? p.subvariants[0].packagings : basePacks;
+    const defaultPackId = (packsForDefault[0] && packsForDefault[0].id) || null;
+
+    const subOptions = hasSub
+      ? p.subvariants.map(sv => `<option value="${sv.id}">${sv.label}</option>`).join("")
+      : "";
+
+    const packOptions = (packsForDefault || []).map(pk => `<option value="${pk.id}">${pk.label}</option>`).join("");
+
+    const defaultPack = getSelectedPackaging(p, defaultSubId, defaultPackId) || packsForDefault[0];
+    const step = inferQtyStep(defaultPack);
+
+    return `
+      <div class="card" data-pid="${p.id}">
+        <div class="card-body">
+          <div class="card-header">
+            <img src="${p.image || ''}" alt="${p.name}" />
+            <div>
+              <h3>${p.name}</h3>
+              <small class="muted">${p.category || ""}</small>
+            </div>
+          </div>
+
+          ${hasSub ? `
+          <label>Subvariação</label>
+          <select class="sel-subvar" data-pid="${p.id}">
+            ${subOptions}
+          </select>
+          ` : ``}
+
+          <label>Embalagem</label>
+          <select class="sel-pack" data-pid="${p.id}">
+            ${packOptions}
+          </select>
+
+          <label>Quantidade</label>
+          <input class="inp-qty" data-pid="${p.id}" type="number" min="0" step="${step}" value="${step === 1 ? 1 : step}" />
+
+          <button class="btn btn-add" data-pid="${p.id}">Adicionar</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // listeners
+  $root.querySelectorAll(".sel-subvar").forEach(sel => {
+    sel.addEventListener("change", (e) => {
+      const pid = +e.target.dataset.pid;
+      const product = (window.PRODUCTS || []).find(x => x.id === pid);
+      if (!product) return;
+
+      const subId = e.target.value;
+      const sub = (product.subvariants || []).find(sv => sv.id === subId);
+
+      const packSel = $root.querySelector(`.sel-pack[data-pid="${pid}"]`);
+      const qtyInp = $root.querySelector(`.inp-qty[data-pid="${pid}"]`);
+
+      const packs = (sub && Array.isArray(sub.packagings)) ? sub.packagings : (product.packagings || []);
+      packSel.innerHTML = packs.map(pk => `<option value="${pk.id}">${pk.label}</option>`).join("");
+
+      const firstPack = packs[0];
+      const step = inferQtyStep(firstPack);
+      qtyInp.step = step;
+      qtyInp.value = step === 1 ? 1 : step;
+      qtyInp.min = 0;
+    });
+  });
+
+  $root.querySelectorAll(".sel-pack").forEach(sel => {
+    sel.addEventListener("change", (e) => {
+      const pid = +e.target.dataset.pid;
+      const product = (window.PRODUCTS || []).find(x => x.id === pid);
+      if (!product) return;
+
+      const packId = e.target.value;
+      const subSel = $root.querySelector(`.sel-subvar[data-pid="${pid}"]`);
+      const subId = subSel ? subSel.value : null;
+
+      const qtyInp = $root.querySelector(`.inp-qty[data-pid="${pid}"]`);
+      const pack = getSelectedPackaging(product, subId, packId);
+      const step = inferQtyStep(pack);
+      qtyInp.step = step;
+
+      const current = parseFloat(qtyInp.value || "0") || 0;
+      const fixed = step === 1 ? Math.max(1, Math.round(current)) : Math.max(step, Math.round(current/step)*step);
+      qtyInp.value = fixed;
+    });
+  });
+
+  $root.querySelectorAll(".btn-add").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const pid = +e.target.dataset.pid;
+      const product = (window.PRODUCTS || []).find(x => x.id === pid);
+      if (!product) return;
+
+      const subSel = $root.querySelector(`.sel-subvar[data-pid="${pid}"]`);
+      const subId = subSel ? subSel.value : null;
+      const subLabel = subSel ? subSel.options[subSel.selectedIndex].text : null;
+
+      const packSel = $root.querySelector(`.sel-pack[data-pid="${pid}"]`);
+      const packId = packSel.value;
+      const packLabel = packSel.options[packSel.selectedIndex].text;
+
+      const qtyInp = $root.querySelector(`.inp-qty[data-pid="${pid}"]`);
+      const qty = parseFloat(qtyInp.value || "0") || 0;
+
+      const pack = getSelectedPackaging(product, subId, packId);
+      const payload = {
+        productId: product.id,
+        productName: product.name,
+        subvariantId: subId,
+        subvariantLabel: subLabel,
+        packagingId: packId,
+        packagingLabel: packLabel,
+        unit: pack ? pack.unit : null,
+        multiplier: pack && pack.multiplier != null ? pack.multiplier : null,
+        qty,
+      };
+
+      console.log("ADD TO CART:", payload);
+      btn.textContent = "Adicionado!";
+      setTimeout(() => btn.textContent = "Adicionar", 900);
+    });
+  });
+}
+
+// Busca simples
+document.getElementById('search').addEventListener('input', (e) => {
+  const term = (e.target.value || '').toLowerCase().trim();
+  const filtered = term
+    ? window.PRODUCTS.filter(p => (p.name || '').toLowerCase().includes(term))
+    : window.PRODUCTS;
+  renderCatalog(filtered);
+});
+
+// Inicializa
+renderCatalog(window.PRODUCTS);
+</script>
+</body>
+</html>

@@ -11,7 +11,7 @@ const NEGOTIATION_PHONE = "5532991137334";  // WhatsApp do mercador (55 + DDD + 
 const FORCE_RELOGIN = false;                 // true só na 1ª execução (gera QR)
 const USE_INSTALLED_CHROME = true;
 const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-const STORE_NAME = "CEASA Barbacena";
+const STORE_NAME = "Comercial Celeiro";
 
 /** ========= DADOS COMERCIAIS (FIXME: ajuste) ========= */
 const BUSINESS_HOURS = [

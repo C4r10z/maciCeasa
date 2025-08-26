@@ -92,6 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const unitHint    = document.getElementById("variantUnitHint");
   const btnClose    = document.getElementById("variantClose");
   const btnAdd      = document.getElementById("variantAddBtn");
+  const modalCard   = modal ? modal.querySelector('.variant-card') : null;
 
   // ===== Utils =====
   function showToast(text){
@@ -106,6 +107,134 @@ document.addEventListener("DOMContentLoaded", () => {
     const s = String(str).replace(',','.').replace(/[^\d.\-]/g,'');
     const n = parseFloat(s);
     return Number.isFinite(n) ? n : NaN;
+  }
+  function fmt(n, dec=2){
+    const s = Number(n||0).toFixed(dec);
+    return s.replace('.', ',');
+  }
+
+  // ===== Helpers Subvariação + Embalagem =====
+  function getSubvariants(product){
+    return Array.isArray(product.subvariants) ? product.subvariants : [];
+  }
+  function getPacksFor(product, subId){
+    const sub = getSubvariants(product).find(sv => sv.id === subId);
+    if (sub && Array.isArray(sub.packagings)) return sub.packagings;
+    return Array.isArray(product.packagings) ? product.packagings : [];
+  }
+  function getPack(product, subId, packId){
+    return getPacksFor(product, subId).find(p => p.id === packId) || null;
+  }
+  function inferQtyStep(pack){
+    if (!pack) return 1;
+    if (pack.qtyStep != null) return pack.qtyStep;
+    return pack.unit === 'kg' ? 0.1 : 1; // kg => decimais; outros => inteiro
+  }
+  function catClass(cat){
+    switch ((cat||'').toLowerCase()) {
+      case 'frutas':   return 'cat-frutas';
+      case 'legumes':  return 'cat-legumes';
+      case 'verduras': return 'cat-verduras';
+      case 'temperos': return 'cat-temperos';
+      default:         return 'cat-outros';
+    }
+  }
+
+  // ===== Pretty Select (global) – header e modal =====
+  function enhanceSelect(selectEl, opts={}) {
+    if (!selectEl || selectEl.dataset.ps) return;
+    selectEl.dataset.ps = '1';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'ps' + (opts.compact ? ' ps--compact' : '');
+    // mantém o select no DOM pro 'change'
+    selectEl.parentNode.insertBefore(wrap, selectEl);
+    wrap.appendChild(selectEl);
+    selectEl.style.display = 'none';
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'ps-trigger';
+    trigger.innerHTML = `
+      <span class="ps-label">${selectEl.options[selectEl.selectedIndex]?.text || selectEl.options[0]?.text || ''}</span>
+      <span class="ps-caret" aria-hidden="true"></span>`;
+    wrap.appendChild(trigger);
+
+    const menu = document.createElement('div');
+    menu.className = 'ps-menu';
+    wrap.appendChild(menu);
+
+    const build = () => {
+      menu.innerHTML = '';
+      [...selectEl.options].forEach((opt, i) => {
+        const item = document.createElement('div');
+        item.className = 'ps-option' + (opt.disabled ? ' disabled' : '');
+        item.tabIndex = opt.disabled ? -1 : 0;
+        item.setAttribute('role','option');
+        item.dataset.value = opt.value;
+        item.textContent = opt.text;
+        if (i === selectEl.selectedIndex) item.setAttribute('aria-selected','true');
+
+        const choose = () => {
+          if (opt.disabled) return;
+          selectEl.value = opt.value;
+          // label
+          trigger.querySelector('.ps-label').textContent = opt.text;
+          // estado visual
+          menu.querySelectorAll('.ps-option[aria-selected="true"]').forEach(n => n.removeAttribute('aria-selected'));
+          item.setAttribute('aria-selected','true');
+          // notifica app
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+          // fecha
+          wrap.classList.remove('open');
+          trigger.focus();
+        };
+
+        item.addEventListener('click', choose);
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(); }
+        });
+
+        menu.appendChild(item);
+      });
+    };
+    build();
+
+    const toggle = (wantOpen) => {
+      const open = wantOpen != null ? wantOpen : !wrap.classList.contains('open');
+      if (open) {
+        document.querySelectorAll('.ps.open').forEach(p => p.classList.remove('open'));
+        wrap.classList.add('open');
+        (menu.querySelector('.ps-option[aria-selected="true"]') || menu.querySelector('.ps-option:not(.disabled)'))?.focus();
+      } else {
+        wrap.classList.remove('open');
+      }
+    };
+
+    trigger.addEventListener('click', () => toggle());
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(true); }
+    });
+
+    // teclado no menu
+    menu.addEventListener('keydown', (e) => {
+      const items = [...menu.querySelectorAll('.ps-option:not(.disabled)')];
+      const idx = items.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); toggle(false); trigger.focus(); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); (items[idx+1] || items[0]).focus(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); (items[idx-1] || items[items.length-1]).focus(); }
+      if (e.key === 'Home') { e.preventDefault(); items[0]?.focus(); }
+      if (e.key === 'End') { e.preventDefault(); items[items.length-1]?.focus(); }
+    });
+
+    // fecha clicando fora
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) wrap.classList.remove('open');
+    });
+  }
+
+  function enhanceSelectsInModal(){
+    document.querySelectorAll('#variantModal select').forEach(el => enhanceSelect(el));
   }
 
   // ===== Pré-preencher com localStorage =====
@@ -122,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (preferTimeChk)   preferTimeChk.checked = false;
   if (preferTimeInput) preferTimeInput.style.display = "none";
 
-  // Salvar conforme digita (dados persistentes: nome/doc/endereço/obs)
+  // Salvar conforme digita (dados persistentes)
   const saveText = (key, el) => saveUser({ [key]: (el.value || "").trim() });
   clientFullNameEl?.addEventListener("input", () => saveText("fullName", clientFullNameEl));
   clientDocEl?.addEventListener("input", () => {
@@ -145,73 +274,198 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== Variant modal =====
   let currentProduct = null;
-  let currentVariants = [];
-  let currentVariant = null;
+  let currentSubId = null;
+  let currentPackId = null;
+  let currentQtyStep = 1;
 
   function openVariants(product){
     currentProduct  = product;
-    currentVariants = (product.variants && product.variants.length)
-      ? product.variants
-      : [{ id:'default', label:'Padrão', unit:'unid' }];
 
+    // header do modal
     modalTitle.textContent = product.name;
     modalImg.src = product.image || '';
     modalImg.alt = product.name || '';
-    modalDesc.textContent = product.desc || '';
-    qtyInput.value = '1';
 
-    optBox.innerHTML = '';
-    currentVariants.forEach((v, i) => {
-      const id = `vopt_${product.id}_${v.id}`;
-      const row = document.createElement('label');
-      row.className = 'variant-option';
-      row.innerHTML = `
-        <input type="radio" name="variantOption" id="${id}" value="${v.id}" ${i===0?'checked':''}>
-        <div><div><strong>${v.label}</strong></div></div>`;
-      optBox.appendChild(row);
-    });
-
-    currentVariant = { ...currentVariants[0] };
-    unitHint.textContent = currentVariant.unit
-      ? `Unidade: ${currentVariant.unit}${currentVariant.multiplier?` (x${currentVariant.multiplier})`:''}`
+    // aplica classe de categoria no card do modal e badge
+    if (modalCard) {
+      ['cat-frutas','cat-legumes','cat-verduras','cat-temperos','cat-outros']
+        .forEach(c => modalCard.classList.remove(c));
+      modalCard.classList.add(catClass(product.category));
+    }
+    modalDesc.innerHTML = product.category
+      ? `<span class="cat-badge">${product.category}</span>`
       : '';
 
-    optBox.onchange = () => {
-      const sel = optBox.querySelector('input[name="variantOption"]:checked');
-      const vid = sel ? sel.value : currentVariants[0].id;
-      currentVariant = { ...currentVariants.find(v => v.id === vid) };
-      unitHint.textContent = currentVariant.unit
-        ? `Unidade: ${currentVariant.unit}${currentVariant.multiplier?` (x${currentVariant.multiplier})`:''}`
-        : '';
+    // Subvariações e Embalagens
+    const subs = getSubvariants(product);
+    currentSubId = subs.length ? subs[0].id : null;
+
+    const packs = getPacksFor(product, currentSubId);
+    const firstPack = packs[0] || null;
+    currentPackId = firstPack ? firstPack.id : null;
+    currentQtyStep = inferQtyStep(firstPack);
+
+    // ——— Subvariação como CHIPS
+    const subBlock = subs.length ? `
+      <div class="field-block" style="grid-column: 1 / -1;">
+        <label>Subvariação</label>
+        <div id="modalSubChips" class="option-chips" role="radiogroup" aria-label="Subvariação">
+          ${subs.map((sv, i) => `
+            <label class="chip">
+              <input type="radio" name="subvar" value="${sv.id}" ${i===0?'checked':''} />
+              <span>${sv.label}</span>
+            </label>`).join('')}
+        </div>
+      </div>` : '';
+
+    // ——— Embalagem como SELECT
+    const packBlock = `
+      <div class="field-block">
+        <label>Embalagem</label>
+        <select id="modalPack" class="field">
+          ${packs.map(pk => `<option value="${pk.id}">${pk.label}</option>`).join('')}
+        </select>
+      </div>`;
+
+    // grid 1→2 colunas
+    optBox.innerHTML = `<div class="field-grid">${subBlock}${packBlock}</div>`;
+
+    // Quantidade inicial e dica
+    qtyInput.value = currentQtyStep === 1 ? '1' : String(currentQtyStep).replace('.', ',');
+    qtyInput.setAttribute('data-step', String(currentQtyStep));
+    qtyInput.setAttribute('inputmode', currentQtyStep === 1 ? 'numeric' : 'decimal');
+    unitHint.textContent = firstPack ? `Unidade: ${firstPack.unit}${firstPack.multiplier ? ` • equiv: ${firstPack.multiplier}` : ''}` : '';
+
+    // listeners — chips de Subvariação
+    const chipsBox = document.getElementById('modalSubChips');
+    const selPack  = document.getElementById('modalPack');
+
+    if (chipsBox) {
+      chipsBox.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target && target.name === 'subvar') {
+          currentSubId = target.value || null;
+          const lpacks = getPacksFor(product, currentSubId);
+          selPack.innerHTML = lpacks.map(pk => `<option value="${pk.id}">${pk.label}</option>`).join('');
+          currentPackId = lpacks[0] ? lpacks[0].id : null;
+
+          const p0 = lpacks[0] || null;
+          currentQtyStep = inferQtyStep(p0);
+          qtyInput.value = currentQtyStep === 1 ? '1' : String(currentQtyStep).replace('.', ',');
+          qtyInput.setAttribute('data-step', String(currentQtyStep));
+          qtyInput.setAttribute('inputmode', currentQtyStep === 1 ? 'numeric' : 'decimal');
+          unitHint.textContent = p0 ? `Unidade: ${p0.unit}${p0.multiplier ? ` • equiv: ${p0.multiplier}` : ''}` : '';
+        }
+      });
+    }
+
+    // melhora o <select> do modal
+    enhanceSelectsInModal();
+
+    // listeners — embalagem select
+    if (selPack) {
+      selPack.addEventListener('change', () => {
+        currentPackId = selPack.value || null;
+        const pk = getPack(product, currentSubId, currentPackId);
+        const st = inferQtyStep(pk);
+        currentQtyStep = st;
+
+        let cur = parseQty(qtyInput.value || (st === 1 ? '1' : String(st)));
+        if (st === 1) cur = Math.max(1, Math.round(cur));
+        else {
+          const k = Math.max(st, Math.round(cur / st) * st);
+          cur = Number(k.toFixed(3));
+        }
+        qtyInput.value = st === 1 ? String(cur) : String(cur.toFixed(1)).replace('.', ',');
+        qtyInput.setAttribute('data-step', String(st));
+        qtyInput.setAttribute('inputmode', st === 1 ? 'numeric' : 'decimal');
+        unitHint.textContent = pk ? `Unidade: ${pk.unit}${pk.multiplier ? ` • equiv: ${pk.multiplier}` : ''}` : '';
+      });
+    }
+
+    // normaliza digitação manual
+    qtyInput.onblur = () => {
+      const st = parseFloat(qtyInput.getAttribute('data-step') || '1');
+      let cur = parseQty(qtyInput.value || (st === 1 ? '1' : String(st)));
+      if (st === 1) cur = Math.max(1, Math.round(cur));
+      else {
+        const k = Math.max(st, Math.round(cur / st) * st);
+        cur = Number(k.toFixed(3));
+      }
+      qtyInput.value = st === 1 ? String(cur) : String(cur.toFixed(1)).replace('.', ',');
     };
 
+    // abrir modal
     document.body.classList.add('variants-open');
     modal.classList.add('open');
     modal.setAttribute('aria-hidden','false');
   }
+
   function closeVariants(){
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden','true');
     document.body.classList.remove('variants-open');
-    currentProduct = currentVariant = null; currentVariants = [];
+    currentProduct = null; currentSubId = null; currentPackId = null; currentQtyStep = 1;
   }
   btnClose?.addEventListener('click', closeVariants);
   modal?.addEventListener('click', (e)=>{ if(e.target===modal) closeVariants(); });
 
+  // Botões +/- do modal (usam o step)
+  (function(){
+    const btnMinus = document.getElementById('qtyMinus');
+    const btnPlus  = document.getElementById('qtyPlus');
+    function getStep(){ return parseFloat(qtyInput.getAttribute('data-step') || '1') || 1; }
+    function getVal(){ return parseQty(qtyInput.value || (getStep()===1?'1':String(getStep()))); }
+    function setVal(v, st){
+      let cur = Number(v || 0);
+      if (st === 1) cur = Math.max(1, Math.round(cur));
+      else cur = Math.max(st, Number((Math.round(cur/st)*st).toFixed(3)));
+      qtyInput.value = st === 1 ? String(cur) : String(cur.toFixed(1)).replace('.', ',');
+    }
+    btnMinus && btnMinus.addEventListener('click', ()=> { const st=getStep(); setVal(getVal()-st, st); });
+    btnPlus  && btnPlus.addEventListener('click', ()=> { const st=getStep(); setVal(getVal()+st, st); });
+  })();
+
+  // Adicionar ao carrinho
   btnAdd?.addEventListener('click', () => {
-    const q = Math.max(0.1, parseQty(qtyInput.value || 1));
+    if (!currentProduct) return;
+
+    const chipSel = document.querySelector('#modalSubChips input[name="subvar"]:checked');
+    const subId    = chipSel ? chipSel.value : null;
+    const subLabel = chipSel ? chipSel.parentElement.querySelector('span').textContent : null;
+
+    const packSel   = document.getElementById('modalPack');
+    const packId    = packSel ? packSel.value : null;
+    const packLabel = packSel ? packSel.options[packSel.selectedIndex].text : null;
+
+    const pk = getPack(currentProduct, subId, packId);
+    if (!pk) { showToast("Selecione a embalagem"); return; }
+
+    const st = inferQtyStep(pk);
+    let qty = parseQty(qtyInput.value || (st===1 ? '1' : String(st)));
+    if (st === 1) qty = Math.max(1, Math.round(qty));
+    else qty = Math.max(st, Number((Math.round(qty/st)*st).toFixed(3)));
+
     const item = {
       id: currentProduct.id,
       name: currentProduct.name,
       image: currentProduct.image,
-      qty: +q.toFixed(2),
-      variantId: currentVariant.id,
-      variantLabel: currentVariant.label,
-      unit: currentVariant.unit,
-      multiplier: currentVariant.multiplier || 1
+      qty: +qty,
+      qtyStep: st,
+      subvariantId: subId,
+      subvariantLabel: subLabel,
+      packagingId: packId,
+      packagingLabel: packLabel,
+      unit: pk.unit,
+      multiplier: pk.multiplier ?? null,
     };
-    const idx = cart.findIndex(x => x.id===item.id && x.variantId===item.variantId);
-    if (idx>=0) cart[idx].qty = +(cart[idx].qty + item.qty).toFixed(2);
+
+    const idx = cart.findIndex(x =>
+      x.id===item.id &&
+      x.subvariantId===item.subvariantId &&
+      x.packagingId===item.packagingId
+    );
+    if (idx>=0) cart[idx].qty = +(cart[idx].qty + item.qty).toFixed(3);
     else cart.push(item);
 
     updateCartUI();
@@ -232,13 +486,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!catalogEl) return;
 
     catalogEl.innerHTML = filtered.map(p => `
-      <article class="card" data-id="${p.id}">
+      <article class="card ${catClass(p.category)}" data-id="${p.id}">
         <img src="${p.image}" alt="${p.name}" style="width:100%;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--border)"/>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <h3>${p.name}</h3>
           <span class="badge">${p.category}</span>
         </div>
-        <div class="hint"><i class="fas fa-tags"></i> Escolha a variação</div>
+        <div class="hint"><i class="fas fa-tags"></i> Toque para escolher subvariação e embalagem</div>
         <button class="btn outline choose">Escolher</button>
       </article>
     `).join("");
@@ -251,113 +505,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  (() => {
-  const $ = (sel, root=document) => root.querySelector(sel);
-  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
-
-  const body = document.body;
-  const modal = $('#variantModal');
-  const modalCard = modal ? $('.variant-card', modal) : null;
-  const drawer = $('#cartDrawer');
-
-  let lastOpener = null; // quem abriu (para devolver o foco)
-
-  // —— Helpers de foco simples
-  function trapFocus(container, e){
-    const focusables = $$('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])', container)
-      .filter(el => !el.hasAttribute('disabled') && el.tabIndex !== -1);
-    if (!focusables.length) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  }
-
-  // —— Popup do item
-  function openVariant(opener){
-    lastOpener = opener || document.activeElement;
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden','false');
-    body.classList.add('modal-open');
-    // foca dentro
-    setTimeout(()=> { if (modalCard) modalCard.focus(); }, 0);
-    document.addEventListener('keydown', onModalKey);
-  }
-  function closeVariant(){
-    modal.classList.remove('open');
-    modal.setAttribute('aria-hidden','true');
-    body.classList.remove('modal-open');
-    document.removeEventListener('keydown', onModalKey);
-    if (lastOpener) lastOpener.focus();
-  }
-  function onModalKey(e){
-    if (e.key === 'Escape') closeVariant();
-    if (e.key === 'Tab') { trapFocus(modal, e); }
-  }
-  if (modal){
-    modal.addEventListener('click', (e)=>{
-      if (e.target === modal) closeVariant(); // clique fora
-    });
-    $$( '[data-open-variant]' ).forEach(btn=>{
-      btn.addEventListener('click', ()=> openVariant(btn));
-    });
-    $$( '[data-close-variant]' ).forEach(btn=>{
-      btn.addEventListener('click', closeVariant);
-    });
-  }
-
-  // —— Drawer do carrinho
-  function openCart(opener){
-    lastOpener = opener || document.activeElement;
-    drawer.classList.add('open');
-    drawer.setAttribute('aria-hidden','false');
-    body.classList.add('drawer-open');
-    document.addEventListener('keydown', onDrawerKey);
-    // foco no primeiro interativo do drawer:
-    setTimeout(()=>{
-      const focusable = drawer.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      focusable && focusable.focus();
-    }, 0);
-  }
-  function closeCart(){
-    drawer.classList.remove('open');
-    drawer.setAttribute('aria-hidden','true');
-    body.classList.remove('drawer-open');
-    document.removeEventListener('keydown', onDrawerKey);
-    if (lastOpener) lastOpener.focus();
-  }
-  function onDrawerKey(e){
-    if (e.key === 'Escape') closeCart();
-    if (e.key === 'Tab') { trapFocus(drawer, e); }
-  }
-  if (drawer){
-    $$( '[data-open-cart]' ).forEach(btn=>{
-      btn.addEventListener('click', ()=> openCart(btn));
-    });
-    $$( '[data-close-cart]' ).forEach(btn=>{
-      btn.addEventListener('click', closeCart);
-    });
-    // fecha clicando no backdrop escuro
-    drawer.addEventListener('click', (e)=>{
-      if (e.target === drawer) closeCart();
-    });
-  }
-})();
-
-  
-  // Controles de quantidade no modal
-  (function(){
-    const input = document.getElementById('variantQty');
-    const btnMinus = document.getElementById('qtyMinus');
-    const btnPlus = document.getElementById('qtyPlus');
-
-    function getVal(){ return parseInt(input.value, 10) || 1; }
-    function setVal(v){ input.value = Math.max(1, v); }
-
-    btnMinus && btnMinus.addEventListener('click', ()=> setVal(getVal()-1));
-    btnPlus  && btnPlus.addEventListener('click', ()=> setVal(getVal()+1));
-  })();
-
+  // Clique nos cards → abrir modal
   catalogEl?.addEventListener("click", (e)=>{
     const card = e.target.closest(".card");
     if(!card) return;
@@ -370,8 +518,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== Carrinho =====
   function updateCartUI(){
-    const itemsCount = cart.reduce((s,x)=>s+x.qty,0);
-    if (cartCount) cartCount.textContent = itemsCount.toFixed(1);
+    const itemsCount = cart.length;
+    if (cartCount) cartCount.textContent = String(itemsCount);
 
     if(!cart.length){
       if (cartItemsEl) {
@@ -386,26 +534,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (cartItemsEl) {
-      cartItemsEl.innerHTML = cart.map(x=>`
+      cartItemsEl.innerHTML = cart.map((x, idx)=> {
+        const qtyTxt = x.unit === 'kg' ? fmt(x.qty, 1) : String(Math.round(x.qty));
+        const tags = [
+          x.subvariantLabel ? `<span class="tag">${x.subvariantLabel}</span>` : '',
+          x.packagingLabel ? `<span class="tag">${x.packagingLabel}</span>` : '',
+        ].filter(Boolean).join(' ');
+        return `
         <div class="cart-row">
           <img src="${x.image}" alt="${x.name}">
           <div class="line">
-            <strong>${x.name}</strong>
-            <small class="muted">${x.variantLabel} • ${x.qty.toFixed(1)} ${x.unit}</small>
+            <strong>${x.name}</strong> ${tags}
+            <small class="muted">${qtyTxt} ${x.unit}${x.multiplier?` • mult ${x.multiplier}`:''}</small>
             <div class="actions" style="display:flex;gap:6px;align-items:center;margin-top:5px">
-              <button class="icon-btn dec" data-id="${x.id}" data-vid="${x.variantId}"><i class="fas fa-minus"></i></button>
-              <span style="font-weight:600">${x.qty.toFixed(1)} ${x.unit}</span>
-              <button class="icon-btn inc" data-id="${x.id}" data-vid="${x.variantId}"><i class="fas fa-plus"></i></button>
-              <button class="icon-btn remove" data-id="${x.id}" data-vid="${x.variantId}" style="margin-left:auto;border-color:#fca5a5;color:#b91c1c">
+              <button class="icon-btn dec" data-idx="${idx}"><i class="fas fa-minus"></i></button>
+              <span style="font-weight:600">${qtyTxt} ${x.unit}</span>
+              <button class="icon-btn inc" data-idx="${idx}"><i class="fas fa-plus"></i></button>
+              <button class="icon-btn remove" data-idx="${idx}" style="margin-left:auto;border-color:#fca5a5;color:#b91c1c">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
           </div>
-        </div>
-      `).join("");
+        </div>`;
+      }).join("");
     }
 
-    const totalQty = cart.reduce((s,x)=>s+x.qty,0);
+    const totalQty = cart.reduce((s,x)=> s + (x.unit==='kg' ? x.qty : Math.round(x.qty)), 0);
     if (totalQtyEl) totalQtyEl.textContent = totalQty.toFixed(1);
   }
 
@@ -413,23 +567,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const dec = e.target.closest(".dec");
     const inc = e.target.closest(".inc");
     const rem = e.target.closest(".remove");
-    const getIdx = (btn)=>{
-      const id  = Number(btn.dataset.id);
-      const vid = btn.dataset.vid;
-      return cart.findIndex(x=>x.id===id && x.variantId===vid);
-    };
 
-    if(dec){
-      const i = getIdx(dec);
-      if(i>=0){ cart[i].qty = Math.max(0.1, +(cart[i].qty-0.1).toFixed(2)); updateCartUI(); }
+    if (dec) {
+      const i = +dec.dataset.idx;
+      if (i>=0) {
+        const st = cart[i].qtyStep || (cart[i].unit==='kg'?0.1:1);
+        let q = cart[i].qty - st;
+        if (st === 1) q = Math.max(1, Math.round(q));
+        else q = Math.max(st, Number(q.toFixed(3)));
+        cart[i].qty = q;
+        updateCartUI();
+      }
     }
-    if(inc){
-      const i = getIdx(inc);
-      if(i>=0){ cart[i].qty = +(cart[i].qty+0.1).toFixed(2); updateCartUI(); }
+    if (inc) {
+      const i = +inc.dataset.idx;
+      if (i>=0) {
+        const st = cart[i].qtyStep || (cart[i].unit==='kg'?0.1:1);
+        let q = cart[i].qty + st;
+        if (st === 1) q = Math.max(1, Math.round(q));
+        else q = Number(q.toFixed(3));
+        cart[i].qty = q;
+        updateCartUI();
+      }
     }
-    if(rem){
-      const i = getIdx(rem);
-      if(i>=0){ cart.splice(i,1); updateCartUI(); }
+    if (rem) {
+      const i = +rem.dataset.idx;
+      if (i>=0) {
+        cart.splice(i,1);
+        updateCartUI();
+      }
     }
   });
 
@@ -471,11 +637,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     text += `%0A*Itens:*%0A`;
     cart.forEach((x, idx) => {
-      text += `${idx+1}. ${encodeURIComponent(x.name)} — ${x.qty.toFixed(1)} ${encodeURIComponent(x.unit)}%0A`;
+      const qtyTxt = x.unit === 'kg' ? (Number(x.qty).toFixed(1)) : String(Math.round(x.qty));
+      const details = [x.subvariantLabel, x.packagingLabel].filter(Boolean).join(' • ');
+      const name = details ? `${x.name} (${details})` : x.name;
+      text += `${idx+1}. ${encodeURIComponent(name)} — ${encodeURIComponent(qtyTxt)} ${encodeURIComponent(x.unit)}%0A`;
     });
 
-    if ((user.notes || "").trim()){
-      text += `%0A*Observações:* ${encodeURIComponent(user.notes.trim())}%0A`;
+    if ((u.notes || "").trim()){
+      text += `%0A*Observações:* ${encodeURIComponent(u.notes.trim())}%0A`;
     }
 
     text += `%0A*Origem:* Catálogo CEASA (web)`;
@@ -502,6 +671,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${buildWhatsappMessage()}`;
     window.open(url, "_blank");
+  }
+
+  // ===== Embeleza o filtro do HEADER (compacto) =====
+  if (categoryFilter) {
+    enhanceSelect(categoryFilter, { compact: true });
   }
 
   // ===== Eventos globais =====
