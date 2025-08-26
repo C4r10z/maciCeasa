@@ -1,4 +1,4 @@
-// index.js — fluxo único: FIDELIZADO (sem módulo de "novo cliente")
+// index.js — CEASA BOT com Menu (1 horário, 2 endereço, 3 atendente, 4 pedido) + fluxo existente de pedidos do site
 const fs = require("fs");
 const path = require("path");
 const qrcode = require("qrcode-terminal");
@@ -11,10 +11,34 @@ const NEGOTIATION_PHONE = "5532991137334";  // WhatsApp do mercador (55 + DDD + 
 const FORCE_RELOGIN = false;                 // true só na 1ª execução (gera QR)
 const USE_INSTALLED_CHROME = true;
 const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const STORE_NAME = "CEASA Barbacena";
 
-/** ========= STATE / UTILS ========= */
+/** ========= DADOS COMERCIAIS (FIXME: ajuste) ========= */
+const BUSINESS_HOURS = [
+  // 0=Dom, 1=Seg, ... 6=Sáb
+  { dow: 1, open: "07:00", close: "17:00" }, // Seg
+  { dow: 2, open: "07:00", close: "17:00" }, // Ter
+  { dow: 3, open: "07:00", close: "17:00" }, // Qua
+  { dow: 4, open: "07:00", close: "17:00" }, // Qui
+  { dow: 5, open: "07:00", close: "17:00" }, // Sex
+  { dow: 6, open: "07:00", close: "12:00" }, // Sáb
+  // domingo fechado
+];
+const ADDRESS = {
+  line1: "Pavilhão Central – CEASA Barbacena",
+  line2: "Av. Principal, 123 – Bairro Tal",
+  city: "Barbacena/MG",
+  mapUrl: "https://maps.google.com/?q=CEASA+Barbacena", // FIXME: link real
+};
+
+/** ========= STATE / UTILS =========
+ * conversations: controla estado por contato
+ * status possíveis (seus e novos):
+ *  "AWAITING_TOTAL" | "QUOTED" | "CONFIRMED" | "NEGOTIATION" | "IN_PROGRESS" | "QUEUED" | "CANCELED"
+ *  (novos auxiliares) "MENU"
+ */
 const conversations = new Map(); 
-// Map<JID, { status: "AWAITING_TOTAL"|"QUOTED"|"CONFIRMED"|"NEGOTIATION"|"IN_PROGRESS"|"QUEUED"|"CANCELED", items:[], quotedLines:number[], quotedTotal:number, updatedAt:number }>
+// Map<JID, { status, items:[], quotedLines:number[], quotedTotal:number, updatedAt:number, assignedToHuman?:boolean, lastMenuAt?:number, handoffReason?:string }>
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 const now = () => moment().tz(TZ).format("DD/MM/YYYY HH:mm");
@@ -27,12 +51,65 @@ function debugJid(jid) {
   if (jid.serialize) return jid.serialize();
   return JSON.stringify(jid);
 }
+function normalize(txt = "") {
+  return String(txt || "").trim().toLowerCase();
+}
+function greeting() {
+  const hour = parseInt(moment().tz(TZ).format("H"), 10);
+  if (hour < 12) return "Bom dia";
+  if (hour < 18) return "Boa tarde";
+  return "Boa noite";
+}
+function ensureConv(jid) {
+  if (!conversations.has(jid)) {
+    conversations.set(jid, {
+      status: "MENU",
+      updatedAt: Date.now(),
+      assignedToHuman: false,
+      lastMenuAt: 0,
+    });
+  }
+  return conversations.get(jid);
+}
+function buildMainMenu() {
+  return (
+    `📍 *${STORE_NAME}*\n` +
+    `Como posso ajudar? Responda com o número ou a palavra:\n\n` +
+    `1) 🕒 Horário de funcionamento\n` +
+    `2) 📫 Endereço e localização\n` +
+    `3) 👩‍💼 Falar com atendente\n` +
+    `4) 🧺 Fazer um pedido\n\n` +
+    `• Digite *menu* a qualquer momento para voltar.`
+  );
+}
+function formatHours() {
+  const days = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  const byDow = Array.from({ length: 7 }, () => "Fechado");
+  BUSINESS_HOURS.forEach(({ dow, open, close }) => (byDow[dow] = `${open} às ${close}`));
+  const lines = days.map((d, i) => `• ${d}: ${byDow[i]}`).join("\n");
+  return `🕒 *Horário de funcionamento*\n${lines}`;
+}
+function formatAddress() {
+  const parts = [
+    `📫 *Endereço*`,
+    `${ADDRESS.line1}`,
+    `${ADDRESS.line2}`,
+    `${ADDRESS.city}`,
+    ADDRESS.mapUrl ? `\nMapa: ${ADDRESS.mapUrl}` : ``,
+  ];
+  return parts.filter(Boolean).join("\n");
+}
+function shouldResendMenu(conv) {
+  const COOLDOWN_MS = 90_000;
+  if (!conv.lastMenuAt) return true;
+  return Date.now() - conv.lastMenuAt > COOLDOWN_MS;
+}
 
+/** ========= FUNÇÕES DO FLUXO DE PEDIDOS (SEU CÓDIGO EXISTENTE) ========= */
 function isOrderMessageText(t) {
   const s = String(t || "");
   return /\bpedido\s*ceasa\b/i.test(s.replace(/\*/g, ""));
 }
-
 /** Parse itens vindos do site (linhas "1. Nome — 2.0 kg") */
 function parseItemsFromOrder(orderText) {
   const lines = (orderText || "").split(/\r?\n/);
@@ -55,7 +132,6 @@ function parseItemsFromOrder(orderText) {
   }
   return items;
 }
-
 /** Normaliza número BR/US: "1.234,50" -> 1234.50 */
 function normalizeNumber(str) {
   let s = String(str || "").trim();
@@ -64,7 +140,6 @@ function normalizeNumber(str) {
   const n = parseFloat(s);
   return Number.isFinite(n) ? n : NaN;
 }
-
 /** Lê valores por linha; última linha opcional é total */
 function parsePricesPerLine(text, expectedItemsCount) {
   const values = [];
@@ -204,7 +279,116 @@ async function sendClientConfirmUI(to) {
   );
 }
 
-/** ========= HANDLERS ========= */
+/** ========= HANDLERS DE MENU ========= */
+async function sendMenu(to) {
+  const conv = ensureConv(to);
+  conv.status = "MENU";
+  conv.lastMenuAt = Date.now();
+  conv.updatedAt = Date.now();
+  await safeSendMessage(to, `${greeting()}! ${buildMainMenu()}`);
+}
+async function handleHours(to) {
+  const conv = ensureConv(to);
+  conv.updatedAt = Date.now();
+  await safeSendMessage(to, formatHours());
+  if (shouldResendMenu(conv)) await sendMenu(to);
+}
+async function handleAddress(to) {
+  const conv = ensureConv(to);
+  conv.updatedAt = Date.now();
+  await safeSendMessage(to, formatAddress());
+  if (shouldResendMenu(conv)) await sendMenu(to);
+}
+
+/** ========= HANDOFF (ATENDENTE) =========
+ * Fluxo:
+ *  - cliente escolhe opção 3 -> bot pede MOTIVO
+ *  - próxima mensagem vira motivo -> notifica NEGOTIATION_JID e bota assignedToHuman=true
+ *  - enquanto assignedToHuman=true, bot fica silencioso; repassa mensagens do cliente ao atendente
+ * Admin (do número do lojista):
+ *  - #assumir <dddnumero>
+ *  - #encerrar <dddnumero>  (desliga handoff e volta pro bot)
+ *  - #boton   <dddnumero>   (força bot on)
+ */
+async function handleHandoffAskReason(to) {
+  const conv = ensureConv(to);
+  conv.status = "NEGOTIATION";
+  conv.assignedToHuman = true; // já sinaliza standby do bot
+  conv.handoffReason = undefined;
+  conv.updatedAt = Date.now();
+  await safeSendMessage(
+    to,
+    "Certo! Descreva em 1 frase o *motivo* do atendimento (ex.: orçamento, dúvida no pedido, problema com entrega…)."
+  );
+}
+async function handleHandoffCaptureReason(to, reasonText) {
+  const conv = ensureConv(to);
+  conv.handoffReason = (reasonText || "Sem detalhes adicionais").trim();
+  conv.updatedAt = Date.now();
+
+  if (NEGOTIATION_JID) {
+    const msg =
+      `📣 *Novo atendimento para assumir*\n` +
+      `• Cliente: ${await contactLabel(to)}\n` +
+      `• JID: ${to}\n` +
+      `• Motivo: ${conv.handoffReason}\n\n` +
+      `Responda com *#assumir ${String(to).replace("@c.us", "")}* para assumir.\n` +
+      `Ao finalizar, envie *#encerrar ${String(to).replace("@c.us", "")}* para devolver ao bot.`;
+    await safeSendMessage(NEGOTIATION_JID, msg);
+  }
+
+  await safeSendMessage(
+    to,
+    "Prontinho! 👩‍💼 Um atendente humano vai *assumir a conversa* em instantes. Enquanto isso, se precisar, digite *menu*."
+  );
+}
+
+/** ========= COMANDOS ADMIN DO ATENDENTE ========= */
+async function handleAdminCommands(from, body) {
+  const norm = normalize(body);
+  if (!norm.startsWith("#")) return false;
+  if (from !== (NEGOTIATION_JID || "")) return false; // só aceita do lojista
+
+  const parts = norm.split(/\s+/);
+  const cmd = parts[0];
+  const digits = (parts[1] || "").replace(/\D/g, "");
+  const jid = digits ? `${digits}@c.us` : null;
+
+  if ((cmd === "#assumir" || cmd === "#encerrar" || cmd === "#boton") && !jid) {
+    await safeSendMessage(from, "Uso: #assumir <DDDNUMERO> | #encerrar <DDDNUMERO> | #boton <DDDNUMERO>");
+    return true;
+  }
+  const conv = jid ? ensureConv(jid) : null;
+
+  if (cmd === "#assumir" && conv) {
+    conv.assignedToHuman = true;
+    conv.status = "NEGOTIATION";
+    conv.updatedAt = Date.now();
+    await safeSendMessage(from, `OK, assumido: ${jid}`);
+    await safeSendMessage(jid, "✅ Um atendente humano está agora no seu atendimento. O bot ficará em standby.");
+    return true;
+  }
+  if (cmd === "#encerrar" && conv) {
+    conv.assignedToHuman = false;
+    conv.handoffReason = undefined;
+    conv.status = "MENU";
+    conv.updatedAt = Date.now();
+    await safeSendMessage(from, `OK, atendimento encerrado para: ${jid}`);
+    await safeSendMessage(jid, "✅ Atendimento humano encerrado. Posso ajudar em algo mais? Digite *menu* para opções.");
+    return true;
+  }
+  if (cmd === "#boton" && conv) {
+    conv.assignedToHuman = false;
+    if (conv.status === "NEGOTIATION") conv.status = "MENU";
+    conv.updatedAt = Date.now();
+    await safeSendMessage(from, `Bot reativado para: ${jid}`);
+    await safeSendMessage(jid, "🤖 Bot reativado. Digite *menu* para opções.");
+    return true;
+  }
+  return false;
+}
+
+/** ========= ROUTER DE MENSAGENS ========= */
 client.on("message", async (msg) => {
   try {
     if (msg.type !== "chat") return;
@@ -218,15 +402,19 @@ client.on("message", async (msg) => {
     if (!from.includes("@c.us")) from = `${from}@c.us`;
 
     const body = (msg.body || "").trim();
+    const norm = normalize(body);
     console.log(`📩 Mensagem recebida de: ${from} body="${body}"`);
 
-    /* ============================================================
-       0) MERCADOR (NEGOTIATION_JID): orçamento (números) e ações 3/4/5
-       ============================================================ */
-    if (from === NEGOTIATION_JID) {
+    const conv = ensureConv(from);
+
+    /** 0) Comandos admin (#...) — apenas do lojista */
+    if (await handleAdminCommands(from, body)) return;
+
+    /** 1) Mensagens originadas do lojista (NEGOTIATION_JID): orçamento e ações 3/4/5 */
+    if (from === (NEGOTIATION_JID || "")) {
       const lines = body.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
 
-      // ---- 0.1) Ações 3/4/5 (após cliente CONFIRMAR) ----
+      // ---- 1.1) Ações 3/4/5 (após cliente CONFIRMAR) ----
       const firstDigits = (lines[0] || "").replace(/\D/g, "");
       const isSingleCmd = /^[345]$/.test(lines[0] || "");
       const secondIsCmd = /^[345]$/.test(lines[1] || "");
@@ -266,13 +454,12 @@ client.on("message", async (msg) => {
         return;
       }
 
-      // ---- 0.2) Bloco numérico (orçamento) ----
-      const raw = body;
+      // ---- 1.2) Bloco numérico (orçamento) ----
       const looksNumericBlock =
         lines.length > 0 &&
         lines.every((l) => /^[\sR$r$\.,\d-]+$/.test(l)) &&
-        /\d/.test(raw) &&
-        !/[A-Za-zÀ-ÿ]/.test(raw);
+        /\d/.test(body) &&
+        !/[A-Za-zÀ-ÿ]/.test(body);
 
       if (looksNumericBlock) {
         // 1ª linha pode ser telefone
@@ -347,12 +534,55 @@ client.on("message", async (msg) => {
       }
     }
 
-    /* =========================================
-       1) PEDIDO CEASA (sempre fidelizado)
-       ========================================= */
+    /** 2) Se a conversa está em handoff, o bot fica silencioso (a não ser que cliente peça 'menu') */
+    if (conv.assignedToHuman && !["menu", "inicio", "início", "começar"].includes(norm)) {
+      // reencaminha a fala do cliente pro lojista (contexto)
+      if (NEGOTIATION_JID) {
+        await safeSendMessage(NEGOTIATION_JID, `📩 Cliente ${await contactLabel(from)} disse: "${body}"`);
+      }
+      return; // silencioso para o cliente
+    }
+
+    /** 3) INTENÇÕES DE MENU */
+    const isMenu = ["menu", "inicio", "início", "começar"].includes(norm) ||
+      /^(oi|olá|ola|bom dia|boa tarde|boa noite)$/.test(norm);
+    const isHours = norm === "1" || norm.includes("horario") || norm.includes("horário");
+    const isAddress = norm === "2" || norm.includes("endereco") || norm.includes("endereço") || norm.includes("localização") || norm.includes("localizacao");
+    const isHuman = norm === "3" || norm.includes("atendente") || norm.includes("humano") || norm.includes("pessoa");
+    const isOrder = norm === "4" || norm.includes("pedido") || norm.includes("comprar") || norm.includes("carrinho");
+
+    if (isMenu) return sendMenu(from);
+    if (isHours) return handleHours(from);
+    if (isAddress) return handleAddress(from);
+
+    if (isHuman) {
+      // Se ainda não coletou motivo, pergunta; senão, captura a próxima como motivo
+      if (!conv.handoffReason) return handleHandoffAskReason(from);
+      return handleHandoffCaptureReason(from, body);
+    }
+
+    /** 4) OPÇÃO 4: pedido — instrui o cliente a enviar o texto do site
+     * (quando ele colar o "PEDIDO CEASA", cairá no handler original abaixo)
+     */
+    if (isOrder) {
+      await safeSendMessage(
+        from,
+        "Perfeito! 🧺\n\n" +
+        "👉 Se você já tem seu *PEDIDO CEASA* pronto no site, cole ele aqui (aquele texto com os itens).\n\n" +
+        "🔗 Se ainda não montou seu pedido, faça agora mesmo pela página:\n" +
+        "https://maciceasa.netlify.app/\n\n" + // FIXME: coloque o link real da página do CEASA
+        "Assim que chegar seu pedido por aqui, avisamos o lojista e calculamos o orçamento. ✅"
+      );
+      conv.status = "MENU";
+      conv.updatedAt = Date.now();
+      return;
+    }
+
+    /** 5) FLUXO ORIGINAL: PEDIDO CEASA (sempre fidelizado, vindo do site) */
     if (isOrderMessageText(body)) {
       const items = parseItemsFromOrder(body);
       conversations.set(from, {
+        ...conv,
         status: "AWAITING_TOTAL",
         items,
         updatedAt: Date.now(),
@@ -369,10 +599,7 @@ client.on("message", async (msg) => {
       return;
     }
 
-    /* =========================================
-       2) Respostas do CLIENTE (1/2) após orçamento
-       ========================================= */
-    const conv = conversations.get(from);
+    /** 6) Respostas do CLIENTE (1/2) após orçamento */
     if (conv?.status === "QUOTED") {
       if (/^1$/.test(body)) {
         conversations.set(from, { ...conv, status: "CONFIRMED", updatedAt: Date.now() });
@@ -382,32 +609,40 @@ client.on("message", async (msg) => {
         }
         return;
       }
-      if (/^2$/.test(body)) {
-        conversations.set(from, { ...conv, status: "NEGOTIATION", updatedAt: Date.now() });
-        await safeSendMessage(from, `🤝 Sem problemas! Fale direto com o lojista: https://wa.me/${NEGOTIATION_PHONE}`);
+      if (/^2$/.test(body) || /negociar/i.test(body)) {
+        // Em vez de só mandar link, agora acionamos o handoff humano
+        conversations.set(from, { ...conv, status: "NEGOTIATION", updatedAt: Date.now(), assignedToHuman: true, handoffReason: undefined });
+        await handleHandoffAskReason(from);
         if (NEGOTIATION_JID) {
-          await safeSendMessage(NEGOTIATION_JID, `ℹ️ Cliente ${await contactLabel(from)} optou por *NEGOCIAR* diretamente.`);
+          await safeSendMessage(NEGOTIATION_JID, `ℹ️ Cliente ${await contactLabel(from)} optou por *NEGOCIAR* — aguardando motivo do cliente.`);
         }
         return;
       }
-      if (/^(confirmar|negociar)$/i.test(body)) {
+      if (/^(confirmar)$/i.test(body)) {
         await safeSendMessage(from, "Use apenas os números:\n1) Confirmar\n2) Negociar");
         return;
       }
     }
 
     /* =========================================
-       3) Saudação simples
-       ========================================= */
+      3) Saudação simples -> mostrar MENU
+      ========================================= */
     if (/(^|\s)(menu|oi|olá|ola|bom dia|boa tarde|boa noite)($|\s)/i.test(body)) {
-      await (await msg.getChat()).sendStateTyping();
-      await delay(300);
-      await safeSendMessage(
-        from,
-        "Olá! Sou o *robô CEASA*. Envie seu *PEDIDO CEASA* pelo site. Nós calculamos e te retornamos aqui para você confirmar. 🍅🥬"
-      );
+      return sendMenu(from); // <-- abre o menu completo (1/2/3/4)
+    }
+
+    /** 8) Se estiver em NEGOTIATION e o atendente ainda não registrou motivo, capture a fala como motivo */
+    if (conv.status === "NEGOTIATION" && conv.assignedToHuman && !conv.handoffReason) {
+      return handleHandoffCaptureReason(from, body);
+    }
+
+    /** 9) Fallback: se nada se aplicou, ofereça menu */
+    if (shouldResendMenu(conv)) {
+      await safeSendMessage(from, "Não entendi 🤔");
+      return sendMenu(from);
     }
   } catch (e) {
     console.error("Erro em message:", e);
+    try { await safeSendMessage(msg.from, "Ops! Tive um probleminha aqui. Tente novamente em instantes."); } catch {}
   }
 });
