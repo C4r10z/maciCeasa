@@ -692,3 +692,28 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
 .card[class*="cat-"] .ps .ps-option[aria-selected="true"]{
   background: var(--c3);
 }
+/* ===== Sobre nós (usando o card do #clientDataForm) ===== */
+#clientDataForm .about-us{
+  display: grid;
+  gap: 10px;
+}
+
+#clientDataForm .about-us h3{
+  font-size: 1.1rem;
+  line-height: 1.25;
+  color: #243b24; /* combina com a paleta */
+  margin-bottom: 4px;
+}
+
+#clientDataForm .about-us p{
+  color: #334155;  /* cinza-azulado suave p/ leitura */
+}
+
+#clientDataForm .about-us .about-sign{
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: #2a3b2a;
+}
