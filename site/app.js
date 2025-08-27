@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ===== Pretty Select (global) – header e modal =====
+  /* ===== Pretty Select (global) – deixa <select> bonitinho ===== */
   function enhanceSelect(selectEl, opts={}) {
     if (!selectEl || selectEl.dataset.ps) return;
     selectEl.dataset.ps = '1';
@@ -233,8 +233,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function enhanceSelectsInModal(){
-    document.querySelectorAll('#variantModal select').forEach(el => enhanceSelect(el));
+  // aplica no HEADER e observa o catálogo p/ estilizar selects futuros em cards
+  function enhanceHeaderAndCards(){
+    if (categoryFilter) enhanceSelect(categoryFilter, { compact:true });
+
+    const enhanceInside = (root) => {
+      root.querySelectorAll('.card select').forEach(el => enhanceSelect(el));
+    };
+
+    if (catalogEl){
+      enhanceInside(catalogEl); // caso já exista algo
+      const mo = new MutationObserver(muts => {
+        muts.forEach(m => m.addedNodes.forEach(n => {
+          if (!(n instanceof HTMLElement)) return;
+          if (n.matches && n.matches('.card')) enhanceInside(n);
+          else enhanceInside(n);
+        }));
+      });
+      mo.observe(catalogEl, { childList:true, subtree:true });
+    }
   }
 
   // ===== Pré-preencher com localStorage =====
@@ -330,15 +347,18 @@ document.addEventListener("DOMContentLoaded", () => {
     // grid 1→2 colunas
     optBox.innerHTML = `<div class="field-grid">${subBlock}${packBlock}</div>`;
 
-    // Quantidade inicial e dica
+    // aplica o pretty select no select recém-criado do modal
+    const selPack  = document.getElementById('modalPack');
+    if (selPack) enhanceSelect(selPack);
+
+    // Quantidade inicial (sem "unitHint")
     qtyInput.value = currentQtyStep === 1 ? '1' : String(currentQtyStep).replace('.', ',');
     qtyInput.setAttribute('data-step', String(currentQtyStep));
     qtyInput.setAttribute('inputmode', currentQtyStep === 1 ? 'numeric' : 'decimal');
-    unitHint.textContent = firstPack ? `Unidade: ${firstPack.unit}${firstPack.multiplier ? ` • equiv: ${firstPack.multiplier}` : ''}` : '';
+    unitHint.textContent = ''; // removido do layout, a pedido
 
     // listeners — chips de Subvariação
     const chipsBox = document.getElementById('modalSubChips');
-    const selPack  = document.getElementById('modalPack');
 
     if (chipsBox) {
       chipsBox.addEventListener('change', (e) => {
@@ -346,6 +366,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (target && target.name === 'subvar') {
           currentSubId = target.value || null;
           const lpacks = getPacksFor(product, currentSubId);
+
+          // atualiza o select do modal
           selPack.innerHTML = lpacks.map(pk => `<option value="${pk.id}">${pk.label}</option>`).join('');
           currentPackId = lpacks[0] ? lpacks[0].id : null;
 
@@ -354,15 +376,15 @@ document.addEventListener("DOMContentLoaded", () => {
           qtyInput.value = currentQtyStep === 1 ? '1' : String(currentQtyStep).replace('.', ',');
           qtyInput.setAttribute('data-step', String(currentQtyStep));
           qtyInput.setAttribute('inputmode', currentQtyStep === 1 ? 'numeric' : 'decimal');
-          unitHint.textContent = p0 ? `Unidade: ${p0.unit}${p0.multiplier ? ` • equiv: ${p0.multiplier}` : ''}` : '';
+          unitHint.textContent = '';
+          // reconstruir visual do pretty select
+          // (como trocamos as <option>, só atualiza o label)
+          const lbl = selPack.closest('.ps')?.querySelector('.ps-label');
+          if (lbl) lbl.textContent = lpacks[0]?.label || '';
         }
       });
     }
 
-    // melhora o <select> do modal
-    enhanceSelectsInModal();
-
-    // listeners — embalagem select
     if (selPack) {
       selPack.addEventListener('change', () => {
         currentPackId = selPack.value || null;
@@ -379,7 +401,8 @@ document.addEventListener("DOMContentLoaded", () => {
         qtyInput.value = st === 1 ? String(cur) : String(cur.toFixed(1)).replace('.', ',');
         qtyInput.setAttribute('data-step', String(st));
         qtyInput.setAttribute('inputmode', st === 1 ? 'numeric' : 'decimal');
-        unitHint.textContent = pk ? `Unidade: ${pk.unit}${pk.multiplier ? ` • equiv: ${pk.multiplier}` : ''}` : '';
+
+        unitHint.textContent = '';
       });
     }
 
@@ -545,7 +568,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <img src="${x.image}" alt="${x.name}">
           <div class="line">
             <strong>${x.name}</strong> ${tags}
-            <small class="muted">${qtyTxt} ${x.unit}${x.multiplier?` • mult ${x.multiplier}`:''}</small>
+            <small class="muted">${qtyTxt} ${x.unit}</small>
             <div class="actions" style="display:flex;gap:6px;align-items:center;margin-top:5px">
               <button class="icon-btn dec" data-idx="${idx}"><i class="fas fa-minus"></i></button>
               <span style="font-weight:600">${qtyTxt} ${x.unit}</span>
@@ -673,10 +696,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.open(url, "_blank");
   }
 
-  // ===== Embeleza o filtro do HEADER (compacto) =====
-  if (categoryFilter) {
-    enhanceSelect(categoryFilter, { compact: true });
-  }
+  // ===== Embeleza o filtro do HEADER (compacto) + observa cards
+  enhanceHeaderAndCards();
 
   // ===== Eventos globais =====
   searchInput?.addEventListener("input", renderCatalog);

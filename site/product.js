@@ -45,9 +45,19 @@ window.PRODUCTS = [
     subvariants:[{id:'graudo',label:'Graúdo'},{id:'medio',label:'Médio'}],
     packagings:P.unidade_ou_dz
   },
-  { id: 2,  name:"Ameixa", category:"Frutas", image:"site/assets/ameixa.webp",
-    packagings:P.cx
-  },
+{
+  id: 101, // mantenha o seu id
+  name: "Ameixa",
+  category: "Frutas",
+  image: "site/assets/ameixa.webp",
+  // se não tiver subvariações específicas, pode omitir ou deixar []
+  subvariants: [],
+  // embalagens disponíveis para Ameixa:
+  packagings: [
+    { id:'kg',  label:'Por kg',   unit:'kg' },
+    { id:'cx',  label:'Caixa',    unit:'caixa', multiplier:10 } // ajuste o multiplier se sua caixa tiver outro peso
+  ]
+},
   { id: 3,  name:"Limão Taiti", category:"Frutas", image:"site/assets/limao-taiti.webp",
     packagings:P.kg_saco
   },

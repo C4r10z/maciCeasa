@@ -659,3 +659,36 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
 @supports not (color-mix(in srgb, #000 50%, #fff)) {
   .grid .card[class*="cat-"]:hover{ box-shadow: 0 14px 28px rgba(0,0,0,.12); }
 }
+/* oculta a dica de unidade no modal */
+#variantUnitHint{ display:none !important; }
+/* Cards precisam deixar o menu “escapar” (senão o dropdown é cortado) */
+.card{ overflow: visible; } /* estava hidden */
+
+/* Pretty Select quando usado DENTRO de cards */
+.card .ps .ps-trigger{
+  height:40px; border-radius:10px;
+}
+.card .ps .ps-menu{
+  z-index: 1600;  /* acima do card e de vizinhos */
+}
+
+/* Integra com as cores da categoria do card */
+.card.cat-frutas   { --c1:#b91c1c; --c2:#ff6b6b; --c3:#ffe4e6; }
+.card.cat-legumes  { --c1:#0f766e; --c2:#4ecdc4; --c3:#d9f6f3; }
+.card.cat-verduras { --c1:#166534; --c2:#22c55e; --c3:#e6f6ea; }
+.card.cat-temperos { --c1:#92400e; --c2:#f59e0b; --c3:#fff1c7; }
+.card.cat-outros   { --c1:#3730a3; --c2:#6366f1; --c3:#ecebff; }
+
+.card[class*="cat-"] .ps .ps-trigger:focus{
+  border-color: var(--c2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c2) 28%, transparent);
+}
+@supports not (color-mix(in srgb, #000 50%, #fff)) {
+  .card[class*="cat-"] .ps .ps-trigger:focus{
+    box-shadow: 0 0 0 3px rgba(34,197,94,.18); /* fallback */
+  }
+}
+.card[class*="cat-"] .ps .ps-option:hover,
+.card[class*="cat-"] .ps .ps-option[aria-selected="true"]{
+  background: var(--c3);
+}
