@@ -45,19 +45,28 @@ window.PRODUCTS = [
     subvariants:[{id:'graudo',label:'Graúdo'},{id:'medio',label:'Médio'}],
     packagings:P.unidade_ou_dz
   },
-{
-  id: 101, // mantenha o seu id
-  name: "Ameixa",
-  category: "Frutas",
-  image: "site/assets/ameixa.webp",
-  // se não tiver subvariações específicas, pode omitir ou deixar []
-  subvariants: [],
-  // embalagens disponíveis para Ameixa:
-  packagings: [
-    { id:'kg',  label:'Por kg',   unit:'kg' },
-    { id:'cx',  label:'Caixa',    unit:'caixa', multiplier:10 } // ajuste o multiplier se sua caixa tiver outro peso
-  ]
-},
+  {
+    id: 101, // mantenha o seu id
+    name: "Ameixa",
+    category: "Frutas",
+    image: "site/assets/ameixa.webp",
+    // se não tiver subvariações específicas, pode omitir ou deixar []
+    subvariants: [],
+    // embalagens disponíveis para Ameixa:
+    packagings: [
+      { id:'kg',  label:'Por kg',   unit:'kg' },
+      { id:'cx',  label:'Caixa',    unit:'caixa', multiplier:10 } // ajuste o multiplier se sua caixa tiver outro peso
+    ]
+  },
+  {
+    id: 38, // use um id único que não exista na sua lista
+    name: "Morango",
+    category: "Frutas",
+    image: "site/assets/morango.webp", // ajuste o caminho da imagem
+    subvariants: [],                   // sem subvariações
+    // duas opções de embalagem: Bandeja e Caixa
+    packagings: mergePack(P.bandeja || [], P.cx || [])
+  },
   { id: 3,  name:"Limão Taiti", category:"Frutas", image:"site/assets/limao-taiti.webp",
     packagings:P.kg_saco
   },
