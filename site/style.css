@@ -717,3 +717,15 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
   background: #fff;
   color: #2a3b2a;
 }
+.lottie-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: .75rem; /* ~12px */
+}
+@media (min-width: 768px) {
+  .lottie-wrap dotlottie-wc {
+    width: 360px !important;
+    height: 360px !important;
+  }
+}

@@ -9,7 +9,7 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 /** ========= CONFIG ========= */
 const TZ = "America/Sao_Paulo";
 const NEGOTIATION_PHONE = "5532991137334";  // WhatsApp do mercador (55 + DDD + número)
-const FORCE_RELOGIN = false;                 // true só na 1ª execução (gera QR)
+const FORCE_RELOGIN = true;                 // true só na 1ª execução (gera QR)
 const USE_INSTALLED_CHROME = true;
 const CHROME_PATH = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const STORE_NAME = "Comercial Celeiro";
