@@ -717,15 +717,29 @@ a, button, .btn, .icon-btn, .header, .drawer-header { touch-action: manipulation
   background: #fff;
   color: #2a3b2a;
 }
-.lottie-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: .75rem; /* ~12px */
+/* Por padrão (mobile/tablet): layout normal, sem centralizar */
+.sec-celeiro .lottie-wrap {
+  margin-top: .75rem;
 }
-@media (min-width: 768px) {
-  .lottie-wrap dotlottie-wc {
-    width: 360px !important;
-    height: 360px !important;
+
+/* Desktop: centraliza no MEIO da seção */
+@media (min-width: 1024px) {
+  .sec-celeiro {
+    position: relative;
+  }
+  .sec-celeiro .lottie-wrap {
+    display: grid;
+    place-items: center;        /* centraliza X e Y */
+    min-height: 320px;          /* garante “área” pra centralizar (ajuste se quiser) */
+    margin-top: 1rem;
+    width: 100%;
+  }
+  /* tamanho maior no desktop (opcional) */
+  .sec-celeiro .lottie {
+    width: 360px;
+    height: 360px;
   }
 }
+
+/* Segurança: se algum pai usa texto à esquerda, não afeta o grid */
+dotlottie-wc.lottie { display: block; }
